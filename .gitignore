@@ -1,0 +1,10 @@
+# Environment files - NEVER commit these
+.env
+.env.local
+.env.production
+backend/venv/
+frontend/.next/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.DS_Store
