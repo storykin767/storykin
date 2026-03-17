@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from story_generator import generate_story
+from pydantic import BaseModel
 import os
+
 
 load_dotenv()
 
@@ -20,6 +23,14 @@ supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_SECRET_KEY")
 )
+
+class StoryRequest(BaseModel):
+    child_name: str
+    age: int
+    theme: str
+    hair_color: str
+    eye_color: str
+    gender: str
 
 @app.get("/health")
 def health():
@@ -48,4 +59,39 @@ def read_jobs():
         "message": "Read successful",
         "total_records": len(result.data),
         "records": result.data
+    }
+
+@app.post("/generate-story")
+def generate_story_endpoint(request: StoryRequest):
+    # Save job to Supabase
+    job = supabase.table("jobs").insert({
+        "status": "generating_story",
+        "progress": 10,
+        "child_data": request.model_dump()
+    }).execute()
+
+    job_id = job.data[0]["id"]
+
+    # Generate the story
+    story = generate_story(
+        child_name=request.child_name,
+        age=request.age,
+        theme=request.theme,
+        hair_color=request.hair_color,
+        eye_color=request.eye_color,
+        gender=request.gender
+    )
+
+    # Save story to Supabase
+    supabase.table("jobs").update({
+        "status": "story_complete",
+        "progress": 30,
+        "story_data": story.model_dump()
+    }).eq("id", job_id).execute()
+
+    return {
+        "job_id": job_id,
+        "title": story.title,
+        "pages": len(story.pages),
+        "preview": story.pages[0].page_text
     }
