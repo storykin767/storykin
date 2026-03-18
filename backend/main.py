@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from story_generator import generate_story
 from pydantic import BaseModel
 import os
+from pipeline import run_pipeline
+import asyncio
 
 
 load_dotenv()
@@ -31,6 +33,15 @@ class StoryRequest(BaseModel):
     hair_color: str
     eye_color: str
     gender: str
+
+class GenerateRequest(BaseModel):
+    child_name: str
+    age: int
+    gender: str
+    hair_color: str
+    eye_color: str
+    theme: str
+
 
 @app.get("/health")
 def health():
@@ -94,4 +105,47 @@ def generate_story_endpoint(request: StoryRequest):
         "title": story.title,
         "pages": len(story.pages),
         "preview": story.pages[0].page_text
+    }
+
+
+@app.post("/generate")
+async def generate(request: GenerateRequest):
+    # Create job record
+    job = supabase.table("jobs").insert({
+        "status": "pending",
+        "progress": 0,
+        "child_data": request.model_dump()
+    }).execute()
+
+    job_id = job.data[0]["id"]
+
+    # Run pipeline in background
+    asyncio.create_task(
+        run_pipeline(job_id, request.model_dump())
+    )
+
+    return {"job_id": job_id}
+
+@app.get("/status/{job_id}")
+def get_status(job_id: str):
+    job = supabase.table("jobs")\
+        .select("status, progress, current_page, error_message")\
+        .eq("id", job_id).single().execute()
+    return job.data
+
+
+@app.get("/book/{job_id}")
+def get_book(job_id: str):
+    job = supabase.table("jobs") \
+        .select("*").eq("id", job_id).single().execute()
+
+    pages = supabase.table("story_pages") \
+        .select("*").eq("job_id", job_id) \
+        .order("page_number").execute()
+
+    return {
+        "job_id": job_id,
+        "child_name": job.data["child_data"]["child_name"],
+        "title": job.data["story_data"]["title"],
+        "pages": pages.data
     }
