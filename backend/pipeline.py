@@ -28,10 +28,13 @@ async def run_pipeline(job_id: str, child_data: dict) -> dict:
         story = generate_story(
             child_name=child_data["child_name"],
             age=child_data["age"],
+            pronouns=child_data.get("pronouns", "she"),
             theme=child_data["theme"],
             hair_color=child_data["hair_color"],
             eye_color=child_data["eye_color"],
-            gender=child_data["gender"]
+            skin_tone=child_data.get("skin_tone", "medium-light"),
+            moral=child_data.get("moral", "none"),
+            sidekick=child_data.get("sidekick", None)
         )
         print(f"[{job_id}] Story done: {story.title}")
 

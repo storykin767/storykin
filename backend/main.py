@@ -37,10 +37,13 @@ class StoryRequest(BaseModel):
 class GenerateRequest(BaseModel):
     child_name: str
     age: int
-    gender: str
+    pronouns: str = "she"
     hair_color: str
     eye_color: str
+    skin_tone: str = "medium-light"
     theme: str
+    moral: str = "none"
+    sidekick: str = None
 
 
 @app.get("/health")

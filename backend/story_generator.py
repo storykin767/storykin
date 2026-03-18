@@ -23,7 +23,42 @@ class Story(BaseModel):
 
 # Retry up to 3 times with exponential backoff if API fails
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def generate_story(child_name: str, age: int, theme: str, hair_color: str, eye_color: str, gender: str) -> Story:
+def generate_story(
+    child_name: str,
+    age: int,
+    pronouns: str,
+    theme: str,
+    hair_color: str,
+    eye_color: str,
+    skin_tone: str,
+    moral: str = 'none',
+    sidekick: str = None
+) -> Story:
+
+    # Build pronoun set
+    pronoun_map = {
+        'she': ('she', 'her', 'her', 'herself'),
+        'he': ('he', 'him', 'his', 'himself'),
+        'they': ('they', 'them', 'their', 'themselves'),
+    }
+    subj, obj, poss, reflex = pronoun_map.get(pronouns, pronoun_map['she'])
+
+    # Build moral instruction
+    moral_map = {
+        'none': 'Just make it a fun, joyful adventure with no specific lesson.',
+        'bravery': 'Weave in a theme of being brave and facing your fears.',
+        'kindness': 'Weave in a theme of kindness and caring for others.',
+        'sharing': 'Weave in a theme of sharing and generosity.',
+        'trying': 'Weave in a theme of trying new things even when scared.',
+        'friendship': 'Weave in a theme of the value of true friendship.',
+        'family': 'Weave in a theme of family love and belonging.',
+    }
+    moral_instruction = moral_map.get(moral, moral_map['none'])
+
+    # Build sidekick instruction
+    sidekick_instruction = ''
+    if sidekick:
+        sidekick_instruction = f'- {child_name} has a loyal companion called {sidekick} who appears throughout the story and helps {obj} on the adventure.'
 
     prompt = f"""
 You are a children's book author creating a personalised storybook.
@@ -31,25 +66,28 @@ You are a children's book author creating a personalised storybook.
 Child details:
 - Name: {child_name}
 - Age: {age}
-- Gender: {gender}
+- Pronouns: {subj}/{obj}/{poss}
 - Hair: {hair_color}
 - Eyes: {eye_color}
+- Skin tone: {skin_tone}
 - Theme: {theme}
+{sidekick_instruction}
 
-Write a 10-page children's story starring {child_name} as the hero.
-
-Rules:
+Story guidance:
+- {moral_instruction}
+- Use pronouns {subj}/{obj}/{poss} consistently throughout
 - Each page has 2-3 short sentences maximum (this is a picture book)
 - Language appropriate for age {age}
 - The story has a clear beginning, middle and end
-- {child_name} solves a problem or goes on an adventure
+- {child_name} is the hero who solves a problem or goes on an adventure
 - Warm, magical, joyful tone
 - Never mention AI or that this is generated
 
 For each page also write a DALL-E image prompt that:
 - Describes a children's book illustration in a warm, watercolour style
-- Always describes {child_name} as a {age} year old {gender} with {hair_color} hair and {eye_color} eyes
+- Always describes {child_name} as a {age} year old child with {hair_color} hair, {eye_color} eyes and {skin_tone} skin tone
 - Is specific about the scene, colours and mood
+{f'- Includes {sidekick} as a visible companion in the scene' if sidekick else ''}
 - Ends with: "Children's book illustration, watercolour style, warm colours, magical atmosphere"
 
 Return ONLY valid JSON in this exact format:
