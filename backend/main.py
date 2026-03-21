@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -7,6 +7,8 @@ from pydantic import BaseModel
 import os
 from pipeline import run_pipeline
 import asyncio
+import stripe
+from checkout import create_checkout_session, send_confirmation_email
 
 
 load_dotenv()
@@ -25,6 +27,7 @@ supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_SECRET_KEY")
 )
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 class StoryRequest(BaseModel):
     child_name: str
@@ -44,6 +47,10 @@ class GenerateRequest(BaseModel):
     theme: str
     moral: str = "none"
     sidekick: str = None
+
+class CheckoutRequest(BaseModel):
+    job_id: str
+    tier: str = "physical"
 
 
 @app.get("/health")
@@ -152,3 +159,65 @@ def get_book(job_id: str):
         "title": job.data["story_data"]["title"],
         "pages": pages.data
     }
+
+
+@app.post("/checkout")
+def create_checkout(request: CheckoutRequest):
+    url = create_checkout_session(request.job_id, request.tier)
+    return {"checkout_url": url}
+
+@app.post("/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except Exception:
+        return {"error": "Invalid signature"}
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        job_id = session["metadata"]["job_id"]
+        tier = session["metadata"]["tier"]
+        child_name = session["metadata"]["child_name"]
+        customer_email = session.get("customer_details", {}).get("email")
+        amount = session["amount_total"]
+
+        # Save order to DB
+        order = supabase.table("orders").insert({
+            "job_id": job_id,
+            "stripe_session_id": session["id"],
+            "order_type": tier,
+            "amount": amount,
+            "customer_email": customer_email,
+            "status": "paid",
+            "shipping_address": session.get("shipping_details")
+        }).execute()
+
+        order_id = order.data[0]["id"]
+
+        # Get story title
+        job = supabase.table("jobs").select("story_data")\
+            .eq("id", job_id).single().execute()
+        story_title = job.data["story_data"]["title"]
+
+        # Send confirmation email
+        if customer_email:
+            try:
+                send_confirmation_email(
+                    customer_email=customer_email,
+                    child_name=child_name,
+                    story_title=story_title,
+                    tier=tier,
+                    order_id=order_id
+                )
+            except Exception as e:
+                print(f"Email failed: {e}")
+
+        print(f"Order {order_id} created for {child_name} — {tier}")
+
+    return {"received": True}

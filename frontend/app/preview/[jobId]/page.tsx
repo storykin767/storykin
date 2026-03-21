@@ -34,6 +34,24 @@ export default function PreviewPage() {
     fetchBook();
   }, [jobId]);
 
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+    const handleCheckout = async (tier: string) => {
+      setCheckoutLoading(true);
+      try {
+        const res = await fetch('http://localhost:8000/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, tier }),
+        });
+        const data = await res.json();
+        window.location.href = data.checkout_url;
+      } catch (err) {
+        alert('Something went wrong. Please try again.');
+        setCheckoutLoading(false);
+      }
+    };
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -130,12 +148,20 @@ export default function PreviewPage() {
             Love {childName}'s book?
           </h3>
           <p className="text-gray-500 text-sm mb-4">
-            Print it as a beautiful hardcover book delivered to your door
+            Print it as a beautiful softcover book delivered to your door
           </p>
-          <button className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-white font-bold text-lg rounded-xl transition-all">
-            Print this book — $39.99
+          <button
+            onClick={() => handleCheckout('physical')}
+            disabled={checkoutLoading}
+            className="w-full py-4 bg-amber-400 hover:bg-amber-500 disabled:bg-amber-200 text-white font-bold text-lg rounded-xl transition-all mb-2"
+          >
+            {checkoutLoading ? 'Redirecting...' : 'Print this book — $39.99'}
           </button>
-          <button className="w-full py-2 mt-2 text-gray-400 text-sm hover:text-gray-600 transition-all">
+          <button
+            onClick={() => handleCheckout('digital')}
+            disabled={checkoutLoading}
+            className="w-full py-2 text-gray-400 text-sm hover:text-gray-600 transition-all"
+          >
             Download digital PDF — $9.99
           </button>
         </div>
