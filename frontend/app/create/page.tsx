@@ -125,8 +125,7 @@ export default function CreatePage() {
       const data = await res.json();
       router.push(`/loading?jobId=${data.job_id}`);
     } catch (err) {
-      alert('Something went wrong. Please try again.');
-      setLoading(false);
+      router.push('/error-page');
     }
   };
 

@@ -59,10 +59,10 @@ function LoadingContent() {
           setTimeout(() => {
             router.push(`/preview/${jobId}`);
           }, 1500);
-        } else if (data.status === 'failed') {
-          setMessage("Something went wrong. Please try again.");
-          clearInterval(poll);
-        }
+            } else if (data.status === 'failed') {
+              clearInterval(poll);
+              router.push('/error-page');
+            }
       } catch (err) {
         console.error('Polling error:', err);
       }
