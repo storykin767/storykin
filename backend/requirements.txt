@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-dotenv
+supabase
+openai
+tenacity
+pydantic
+certifi
+httpx
+reportlab
+pillow
+fpdf2
+stripe
+resend
