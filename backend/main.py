@@ -9,7 +9,7 @@ from pipeline import run_pipeline
 import asyncio
 import stripe
 from checkout import create_checkout_session, send_confirmation_email
-
+from typing import Optional
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ class GenerateRequest(BaseModel):
     skin_tone: str = "medium-light"
     theme: str
     moral: str = "none"
-    sidekick: str = None
+    sidekick: Optional[str] = None
 
 class CheckoutRequest(BaseModel):
     job_id: str
