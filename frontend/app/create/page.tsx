@@ -117,7 +117,7 @@ export default function CreatePage() {
           ? `${form.sidekick_name || 'a'} the ${form.sidekick_type}`
           : null,
       };
-      const res = await fetch('http://localhost:8000/generate', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

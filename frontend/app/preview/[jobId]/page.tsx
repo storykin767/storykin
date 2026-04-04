@@ -21,7 +21,7 @@ export default function PreviewPage() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/book/${jobId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/book/${jobId}`);
         const data = await res.json();
         setPages(data.pages);
         setChildName(data.child_name);
@@ -39,7 +39,7 @@ export default function PreviewPage() {
     const handleCheckout = async (tier: string) => {
       setCheckoutLoading(true);
       try {
-        const res = await fetch('http://localhost:8000/checkout', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ job_id: jobId, tier }),
