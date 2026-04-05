@@ -20,8 +20,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://storykin-eta.vercel.app",
-        "https://storykin.com",
-        "https://www.storykin.com",
+        "https://storykinbooks.com",
+        "https://www.storykinbooks.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
