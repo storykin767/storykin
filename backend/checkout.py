@@ -120,7 +120,7 @@ def send_confirmation_email(
     """
 
     resend.Emails.send({
-        "from": "Storykin <onboarding@resend.dev>",
+        "from": "Storykin <hello@storykinbooks.com>",
         "to": customer_email,
         "subject": subject,
         "html": html,
