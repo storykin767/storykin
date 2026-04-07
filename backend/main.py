@@ -10,6 +10,7 @@ import asyncio
 import stripe
 from checkout import create_checkout_session, send_confirmation_email
 from typing import Optional
+from gelato import submit_gelato_order
 
 load_dotenv()
 
@@ -222,6 +223,24 @@ async def stripe_webhook(request: Request):
                 )
             except Exception as e:
                 print(f"Email failed: {e}")
+
+        # Submit Gelato print order (physical books only)
+        if tier == "physical" and session.get("shipping_details"):
+            try:
+                gelato_order_id = submit_gelato_order(
+                    order_id=order_id,
+                    job_id=job_id,
+                    customer_name=session.get("shipping_details", {}).get("name", ""),
+                    shipping_address=session.get("shipping_details", {}),
+                    customer_email=customer_email
+                )
+                supabase.table("orders").update({
+                    "gelato_order_id": gelato_order_id,
+                    "status": "printing"
+                }).eq("id", order_id).execute()
+                print(f"  Order {order_id} sent to Gelato: {gelato_order_id}")
+            except Exception as e:
+                print(f"  Gelato order failed: {e}")
 
         print(f"Order {order_id} created for {child_name} — {tier}")
 
