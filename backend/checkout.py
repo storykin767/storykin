@@ -3,6 +3,7 @@ import resend
 import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from gelato import submit_gelato_order
 
 load_dotenv()
 
