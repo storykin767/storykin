@@ -63,7 +63,77 @@ const FAQS = [
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
-
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": "Storykin Personalised Children's Storybook",
+              "description": "A completely unique personalised children's storybook where your child is the hero. Written by AI, illustrated, printed and delivered.",
+              "url": "https://storykinbooks.com",
+              "brand": {
+                "@type": "Brand",
+                "name": "Storykin"
+              },
+              "offers": {
+                "@type": "Offer",
+                "price": "39.99",
+                "priceCurrency": "USD",
+                "availability": "https://schema.org/InStock",
+                "url": "https://storykinbooks.com/create"
+              },
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "5",
+                "reviewCount": "1"
+              }
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "How personalised is the book?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Every word and illustration is created uniquely for your child. We use their name, appearance, chosen theme and even their pet. No two books are ever the same."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Can I see the book before I pay?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes — always. We generate the complete 10-page book and let you read every page before you decide to purchase."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How long does delivery take?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Books are printed within 24 hours and delivered in 2-3 business days within the US."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "What age is this suitable for?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "We write stories for children aged 2-8. Language complexity adjusts automatically based on age."
+                  }
+                }
+              ]
+            })
+          }}
+        />
       {/* Nav */}
         <nav className="flex items-center justify-between px-6 py-4 border-b border-purple-100 bg-white">
           <div className="flex items-center gap-2">
