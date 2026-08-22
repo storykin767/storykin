@@ -17,6 +17,11 @@ const STAGES = [
   { progress: 100, message: "Your book is ready!" },
 ];
 
+// Generation normally finishes in about a minute
+const SLOW_AFTER_MS = 100_000;
+const STALL_TIMEOUT_MS = 240_000;
+const MAX_CONSECUTIVE_FAILURES = 5;
+
 function LoadingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,6 +30,7 @@ function LoadingContent() {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("Opening the storybook...");
   const [dots, setDots] = useState('');
+  const [slow, setSlow] = useState(false);
 
   // Animate dots
   useEffect(() => {
@@ -36,12 +42,29 @@ function LoadingContent() {
 
   // Poll backend for real progress
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      router.push('/error-page');
+      return;
+    }
+
+    const startedAt = Date.now();
+    let failures = 0;
 
     const poll = setInterval(async () => {
+      // Generation should take about a minute — never poll forever
+      const elapsed = Date.now() - startedAt;
+      if (elapsed > STALL_TIMEOUT_MS) {
+        clearInterval(poll);
+        router.push('/error-page');
+        return;
+      }
+      setSlow(elapsed > SLOW_AFTER_MS);
+
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/status/${jobId}`);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
+        failures = 0;
 
         setProgress(data.progress || 0);
 
@@ -50,7 +73,7 @@ function LoadingContent() {
           setMessage("Writing the story...");
         } else if (data.status === 'generating_images') {
           const page = data.current_page || 1;
-          setMessage(`Painting illustration ${page} of 10...`);
+          setMessage(`Painting illustration ${page} of 12...`);
         } else if (data.status === 'complete') {
           setMessage("Your book is ready!");
           setProgress(100);
@@ -59,12 +82,17 @@ function LoadingContent() {
           setTimeout(() => {
             router.push(`/preview/${jobId}`);
           }, 1500);
-            } else if (data.status === 'failed') {
-              clearInterval(poll);
-              router.push('/error-page');
-            }
+        } else if (data.status === 'failed') {
+          clearInterval(poll);
+          router.push('/error-page');
+        }
       } catch (err) {
         console.error('Polling error:', err);
+        failures += 1;
+        if (failures >= MAX_CONSECUTIVE_FAILURES) {
+          clearInterval(poll);
+          router.push('/error-page');
+        }
       }
     }, 2000);
 
@@ -72,7 +100,7 @@ function LoadingContent() {
   }, [jobId, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex flex-col items-center justify-center px-4">
+    <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
 
         {/* Animated book icon */}
@@ -83,14 +111,17 @@ function LoadingContent() {
           {message}{dots}
         </h2>
         <p className="text-gray-500 mb-10">
-          This takes about 60 seconds — we're making something special
+          {slow
+            ? "Still working — the illustrations are taking a little longer than usual"
+            : "This takes about 60 seconds — we're making something special"}
         </p>
 
         {/* Progress bar */}
         <div className="w-full bg-gray-100 rounded-full h-3 mb-4">
           <div
-            className="bg-amber-400 h-3 rounded-full transition-all duration-1000"
-            style={{ width: `${progress}%` }}
+            className="h-3 rounded-full transition-all duration-1000"
+            data-testid="progress-bar"
+            style={{ width: `${progress}%`, background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
           />
         </div>
 

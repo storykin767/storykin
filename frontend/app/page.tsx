@@ -298,8 +298,8 @@ export default function HomePage() {
               <p className="text-4xl font-bold mb-6" style={{ color: '#7C3AED' }}>$39.99</p>
               <ul className="text-sm text-gray-600 space-y-2 text-left mb-6">
                 {[
-                  'Beautiful softcover book',
-                  '10 unique illustrated pages',
+                  '28-page 8×8" softcover book',
+                  '12 full-page illustrations',
                   'Printed at 300 DPI',
                   'Delivered in 2-3 days',
                   'Money-back guarantee',
@@ -326,8 +326,8 @@ export default function HomePage() {
               <p className="text-4xl font-bold text-gray-700 mb-6">$9.99</p>
               <ul className="text-sm text-gray-600 space-y-2 text-left mb-6">
                 {[
-                  'High resolution PDF',
-                  '10 unique illustrated pages',
+                  'High resolution 29-page PDF',
+                  '12 full-page illustrations',
                   'Instant delivery by email',
                   'Print at home anytime',
                   'Share with family',
