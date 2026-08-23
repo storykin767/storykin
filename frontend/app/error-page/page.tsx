@@ -19,7 +19,7 @@ export default function ErrorPage() {
             {[
               { emoji: '🔄', text: 'Try creating the book again — it usually works second time' },
               { emoji: '⏳', text: 'Wait 2 minutes and try again if the problem persists' },
-              { emoji: '📧', text: 'Email us at hello@storykinbooks.com and we will help immediately' },
+              { emoji: '📧', text: 'Email us at hello@storykin.com and we will help immediately' },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3">
                 <span className="text-xl">{item.emoji}</span>

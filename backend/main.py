@@ -1,52 +1,31 @@
-import asyncio
-import logging
-import os
-import time
-from collections import defaultdict, deque
-from typing import Literal, Optional
-
-# config must be imported first: it validates credentials before any
-# module below builds a client with them
-import config  # noqa: F401  (imported for its side effects)
-import stripe
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
-from supabase import Client, create_client
-
-from config import ENVIRONMENT, IS_PRODUCTION
-from checkout import JobNotReady, create_checkout_session, send_confirmation_email
-from fulfillment import fulfill_order
+from supabase import create_client, Client
+from dotenv import load_dotenv
+from story_generator import generate_story
+from pydantic import BaseModel
+import os
 from pipeline import run_pipeline
+import asyncio
+import stripe
+from checkout import create_checkout_session, send_confirmation_email
+from typing import Optional
+from gelato import submit_gelato_order
 
-log = logging.getLogger("storykin.api")
+load_dotenv()
 
-# Swagger would advertise the admin endpoints to anyone who looks
-app = FastAPI(
-    title="Storykin API",
-    version="1.0.0",
-    docs_url=None if IS_PRODUCTION else "/docs",
-    redoc_url=None if IS_PRODUCTION else "/redoc",
-    openapi_url=None if IS_PRODUCTION else "/openapi.json",
-)
-
-DEFAULT_ORIGINS = (
-    "http://localhost:3000,"
-    "https://storykin-eta.vercel.app,"
-    "https://storykinbooks.com,"
-    "https://www.storykinbooks.com"
-)
-ALLOWED_ORIGINS = [
-    o.strip() for o in os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",")
-    if o.strip()
-]
+app = FastAPI(title="Storykin API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://storykin-eta.vercel.app",
+        "https://storykinbooks.com",
+        "https://www.storykinbooks.com",
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -56,328 +35,213 @@ supabase: Client = create_client(
 )
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
+class StoryRequest(BaseModel):
+    child_name: str
+    age: int
+    theme: str
+    hair_color: str
+    eye_color: str
+    gender: str
 
-# ── Background tasks ──────────────────────────────────────────
-# asyncio only holds weak references to tasks, so an unreferenced
-# task can be garbage collected mid-generation.
-_background_tasks: set = set()
-
-
-def spawn(coro) -> asyncio.Task:
-    task = asyncio.create_task(coro)
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
-    return task
-
-
-# ── Rate limiting ─────────────────────────────────────────────
-# Every /generate call spends roughly $0.75 of OpenAI credit, so the
-# endpoint cannot be left open. In-memory is enough for a single instance.
-RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
-RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "5"))
-RATE_LIMIT_PER_DAY = int(os.getenv("RATE_LIMIT_PER_DAY", "20"))
-HOUR, DAY = 3600, 86400
-
-_rate_buckets: dict = defaultdict(deque)
-
-
-def client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-def enforce_rate_limit(request: Request) -> None:
-    if not RATE_LIMIT_ENABLED:
-        return
-
-    now = time.time()
-    ip = client_ip(request)
-    bucket = _rate_buckets[ip]
-    while bucket and now - bucket[0] > DAY:
-        bucket.popleft()
-
-    in_last_hour = sum(1 for t in bucket if now - t < HOUR)
-    if in_last_hour >= RATE_LIMIT_PER_HOUR:
-        log.warning("Rate limit (hourly) hit by %s", ip)
-        raise HTTPException(
-            status_code=429,
-            detail="You've created a lot of books just now. Please try again in an hour.",
-            headers={"Retry-After": str(HOUR)},
-        )
-    if len(bucket) >= RATE_LIMIT_PER_DAY:
-        log.warning("Rate limit (daily) hit by %s", ip)
-        raise HTTPException(
-            status_code=429,
-            detail="Daily book limit reached. Please try again tomorrow.",
-            headers={"Retry-After": str(DAY)},
-        )
-
-    bucket.append(now)
-
-    # Keep the bucket map from growing without bound
-    if len(_rate_buckets) > 5000:
-        for stale_ip in [k for k, v in _rate_buckets.items() if not v]:
-            del _rate_buckets[stale_ip]
-
-
-# ── Request models ────────────────────────────────────────────
 class GenerateRequest(BaseModel):
-    child_name: str = Field(min_length=1, max_length=40)
-    age: int = Field(ge=2, le=8)
-    pronouns: Literal["she", "he", "they"] = "she"
-    hair_color: str = Field(min_length=1, max_length=40)
-    eye_color: str = Field(min_length=1, max_length=40)
-    skin_tone: Literal[
-        "light", "medium-light", "medium", "medium-dark", "dark"
-    ] = "medium-light"
-    theme: Literal[
-        "dinosaur", "space", "mermaid", "forest", "superhero", "princess"
-    ]
-    moral: Literal[
-        "none", "bravery", "kindness", "sharing", "trying", "friendship", "family"
-    ] = "none"
-    sidekick: Optional[str] = Field(default=None, max_length=60)
-
-    @field_validator("child_name", "hair_color", "eye_color", "sidekick")
-    @classmethod
-    def strip_whitespace(cls, v):
-        return v.strip() if isinstance(v, str) else v
-
-    @field_validator("child_name")
-    @classmethod
-    def name_must_not_be_empty(cls, v):
-        if not v:
-            raise ValueError("Child's name is required")
-        return v
-
+    child_name: str
+    age: int
+    pronouns: str = "she"
+    hair_color: str
+    eye_color: str
+    skin_tone: str = "medium-light"
+    theme: str
+    moral: str = "none"
+    sidekick: Optional[str] = None
 
 class CheckoutRequest(BaseModel):
-    job_id: str = Field(min_length=1, max_length=64)
-    tier: Literal["physical", "digital"] = "physical"
+    job_id: str
+    tier: str = "physical"
 
 
-# ── Endpoints ─────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "storykin-backend", "environment": ENVIRONMENT}
+    return {"status": "ok", "service": "storykin-backend"}
 
-
-@app.post("/generate")
-async def generate(request: GenerateRequest, http_request: Request):
-    enforce_rate_limit(http_request)
-
-    job = supabase.table("jobs").insert({
-        "status": "pending",
+@app.post("/test-db")
+def test_db():
+    # Write a test job record to Supabase
+    result = supabase.table("jobs").insert({
+        "status": "test",
         "progress": 0,
-        "child_data": request.model_dump(),
+        "child_data": {"name": "Ava", "theme": "dinosaur"}
+    }).execute()
+
+    return {
+        "message": "Database connected successfully",
+        "record_id": result.data[0]["id"],
+        "status": result.data[0]["status"]
+    }
+
+@app.get("/test-db")
+def read_jobs():
+    # Read all jobs from Supabase
+    result = supabase.table("jobs").select("*").execute()
+    return {
+        "message": "Read successful",
+        "total_records": len(result.data),
+        "records": result.data
+    }
+
+@app.post("/generate-story")
+def generate_story_endpoint(request: StoryRequest):
+    # Save job to Supabase
+    job = supabase.table("jobs").insert({
+        "status": "generating_story",
+        "progress": 10,
+        "child_data": request.model_dump()
     }).execute()
 
     job_id = job.data[0]["id"]
-    log.info("[%s] Job created for %s (%s)", job_id, request.child_name, request.theme)
 
-    spawn(run_pipeline(job_id, request.model_dump()))
+    # Generate the story
+    story = generate_story(
+        child_name=request.child_name,
+        age=request.age,
+        theme=request.theme,
+        hair_color=request.hair_color,
+        eye_color=request.eye_color,
+        gender=request.gender
+    )
+
+    # Save story to Supabase
+    supabase.table("jobs").update({
+        "status": "story_complete",
+        "progress": 30,
+        "story_data": story.model_dump()
+    }).eq("id", job_id).execute()
+
+    return {
+        "job_id": job_id,
+        "title": story.title,
+        "pages": len(story.pages),
+        "preview": story.pages[0].page_text
+    }
+
+
+@app.post("/generate")
+async def generate(request: GenerateRequest):
+    # Create job record
+    job = supabase.table("jobs").insert({
+        "status": "pending",
+        "progress": 0,
+        "child_data": request.model_dump()
+    }).execute()
+
+    job_id = job.data[0]["id"]
+
+    # Run pipeline in background
+    asyncio.create_task(
+        run_pipeline(job_id, request.model_dump())
+    )
 
     return {"job_id": job_id}
 
-
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
-    try:
-        job = supabase.table("jobs")\
-            .select("status, progress, current_page, error_message")\
-            .eq("id", job_id).single().execute()
-    except Exception:
-        raise HTTPException(status_code=404, detail="Job not found")
+    job = supabase.table("jobs")\
+        .select("status, progress, current_page, error_message")\
+        .eq("id", job_id).single().execute()
     return job.data
 
 
 @app.get("/book/{job_id}")
 def get_book(job_id: str):
-    try:
-        job = supabase.table("jobs").select("*").eq("id", job_id).single().execute()
-    except Exception:
-        raise HTTPException(status_code=404, detail="Book not found")
+    job = supabase.table("jobs") \
+        .select("*").eq("id", job_id).single().execute()
 
-    if job.data["status"] != "complete" or not job.data.get("story_data"):
-        raise HTTPException(status_code=409, detail="Book is not finished yet")
-
-    pages = supabase.table("story_pages")\
-        .select("page_number, page_text, image_url")\
-        .eq("job_id", job_id).order("page_number").execute()
+    pages = supabase.table("story_pages") \
+        .select("*").eq("job_id", job_id) \
+        .order("page_number").execute()
 
     return {
         "job_id": job_id,
         "child_name": job.data["child_data"]["child_name"],
         "title": job.data["story_data"]["title"],
-        "pages": pages.data,
+        "pages": pages.data
     }
 
 
 @app.post("/checkout")
 def create_checkout(request: CheckoutRequest):
-    try:
-        url = create_checkout_session(request.job_id, request.tier)
-    except JobNotReady as e:
-        raise HTTPException(status_code=409, detail=str(e))
-    except Exception as e:
-        log.exception("Checkout failed for job %s: %s", request.job_id, e)
-        raise HTTPException(status_code=500, detail="Could not start checkout")
+    url = create_checkout_session(request.job_id, request.tier)
     return {"checkout_url": url}
-
 
 @app.post("/webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, os.getenv("STRIPE_WEBHOOK_SECRET")
+            payload, sig_header, webhook_secret
         )
-    except Exception as e:
-        # 400 tells Stripe the delivery failed so it retries
-        log.error("Invalid Stripe webhook signature: %s", e)
-        return JSONResponse(status_code=400, content={"error": "Invalid signature"})
+    except Exception:
+        return {"error": "Invalid signature"}
 
-    if event["type"] != "checkout.session.completed":
-        return {"received": True}
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        job_id = session["metadata"]["job_id"]
+        tier = session["metadata"]["tier"]
+        child_name = session["metadata"]["child_name"]
+        customer_email = session.get("customer_details", {}).get("email")
+        amount = session["amount_total"]
 
-    session = event["data"]["object"]
-    session_id = session["id"]
+        # Save order to DB
+        order = supabase.table("orders").insert({
+            "job_id": job_id,
+            "stripe_session_id": session["id"],
+            "order_type": tier,
+            "amount": amount,
+            "customer_email": customer_email,
+            "status": "paid",
+            "shipping_address": session.get("shipping_details")
+        }).execute()
 
-    # Stripe retries deliveries — never charge a customer for two books
-    existing = supabase.table("orders").select("id")\
-        .eq("stripe_session_id", session_id).execute()
-    if existing.data:
-        log.info("Duplicate webhook for session %s — ignoring", session_id)
-        return {"received": True}
+        order_id = order.data[0]["id"]
 
-    metadata = session.get("metadata") or {}
-    job_id = metadata.get("job_id")
-    tier = metadata.get("tier", "physical")
-    child_name = metadata.get("child_name", "your child")
-    customer_email = (session.get("customer_details") or {}).get("email")
-    shipping = session.get("shipping_details") or (
-        (session.get("collected_information") or {}).get("shipping_details")
-    )
+        # Get story title
+        job = supabase.table("jobs").select("story_data")\
+            .eq("id", job_id).single().execute()
+        story_title = job.data["story_data"]["title"]
 
-    if not job_id:
-        log.error("Webhook for session %s has no job_id in metadata", session_id)
-        return {"received": True}
+        # Send confirmation email
+        if customer_email:
+            try:
+                send_confirmation_email(
+                    customer_email=customer_email,
+                    child_name=child_name,
+                    story_title=story_title,
+                    tier=tier,
+                    order_id=order_id
+                )
+            except Exception as e:
+                print(f"Email failed: {e}")
 
-    order = supabase.table("orders").insert({
-        "job_id": job_id,
-        "stripe_session_id": session_id,
-        "stripe_payment_intent": session.get("payment_intent"),
-        "order_type": tier,
-        "amount": session.get("amount_total"),
-        "currency": session.get("currency", "usd"),
-        "customer_email": customer_email,
-        "status": "paid",
-        "shipping_address": shipping,
-    }).execute()
-    order_id = order.data[0]["id"]
-    log.info("[%s] Order created for %s — %s", order_id, child_name, tier)
+        # Submit Gelato print order (physical books only)
+        if tier == "physical" and session.get("shipping_details"):
+            try:
+                gelato_order_id = submit_gelato_order(
+                    order_id=order_id,
+                    job_id=job_id,
+                    customer_name=session.get("shipping_details", {}).get("name", ""),
+                    shipping_address=session.get("shipping_details", {}),
+                    customer_email=customer_email
+                )
+                supabase.table("orders").update({
+                    "gelato_order_id": gelato_order_id,
+                    "status": "printing"
+                }).eq("id", order_id).execute()
+                print(f"  Order {order_id} sent to Gelato: {gelato_order_id}")
+            except Exception as e:
+                print(f"  Gelato order failed: {e}")
 
-    job = supabase.table("jobs").select("story_data")\
-        .eq("id", job_id).single().execute()
-    story_title = (job.data.get("story_data") or {}).get("title", "your storybook")
-
-    if customer_email:
-        try:
-            send_confirmation_email(
-                customer_email=customer_email,
-                child_name=child_name,
-                story_title=story_title,
-                tier=tier,
-                order_id=order_id,
-            )
-        except Exception as e:
-            log.exception("[%s] Confirmation email failed: %s", order_id, e)
-
-    # Building the PDF takes longer than Stripe will wait, so hand it off
-    spawn(fulfill_order(
-        order_id=order_id,
-        job_id=job_id,
-        tier=tier,
-        customer_email=customer_email,
-        child_name=child_name,
-        story_title=story_title,
-        customer_name=(shipping or {}).get("name", ""),
-        shipping_address=shipping,
-    ))
+        print(f"Order {order_id} created for {child_name} — {tier}")
 
     return {"received": True}
-
-
-# ── Admin: recover orders that failed to fulfil ───────────────
-# A paid order whose PDF build or print submission failed is money at
-# risk, so there has to be a way to retry it without a redeploy.
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
-
-
-def require_admin(request: Request) -> None:
-    if not ADMIN_TOKEN:
-        raise HTTPException(status_code=503, detail="Admin API is not configured")
-    if request.headers.get("x-admin-token") != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="Unauthorised")
-
-
-@app.get("/admin/orders")
-def admin_orders(request: Request, status: str = "paid"):
-    """List orders sitting in a given status — defaults to ones never fulfilled."""
-    require_admin(request)
-    result = supabase.table("orders").select("*").eq("status", status)\
-        .order("created_at", desc=True).limit(50).execute()
-    return {"status": status, "count": len(result.data), "orders": result.data}
-
-
-@app.post("/admin/orders/{order_id}/fulfill")
-async def admin_fulfill(order_id: str, request: Request):
-    """Re-run fulfilment for one order (rebuilds the PDF, then prints or emails)."""
-    require_admin(request)
-
-    try:
-        order = supabase.table("orders").select("*")\
-            .eq("id", order_id).single().execute()
-    except Exception:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    job = supabase.table("jobs").select("child_data, story_data")\
-        .eq("id", order.data["job_id"]).single().execute()
-    shipping = order.data.get("shipping_address") or {}
-
-    spawn(fulfill_order(
-        order_id=order_id,
-        job_id=order.data["job_id"],
-        tier=order.data["order_type"],
-        customer_email=order.data.get("customer_email"),
-        child_name=(job.data.get("child_data") or {}).get("child_name", "your child"),
-        story_title=(job.data.get("story_data") or {}).get("title", "your storybook"),
-        customer_name=shipping.get("name", ""),
-        shipping_address=shipping,
-    ))
-
-    log.info("[%s] Manual fulfilment retry requested", order_id)
-    return {"order_id": order_id, "status": "fulfilment restarted"}
-
-
-# ── Debug endpoints (non-production only) ─────────────────────
-if not IS_PRODUCTION:
-
-    @app.get("/test-db")
-    def read_jobs():
-        result = supabase.table("jobs").select("*")\
-            .order("created_at", desc=True).limit(20).execute()
-        return {"total_records": len(result.data), "records": result.data}
-
-    @app.post("/test-db")
-    def test_db():
-        result = supabase.table("jobs").insert({
-            "status": "test",
-            "progress": 0,
-            "child_data": {"name": "Ava", "theme": "dinosaur"},
-        }).execute()
-        return {"record_id": result.data[0]["id"]}

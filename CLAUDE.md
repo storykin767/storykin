@@ -22,15 +22,11 @@ Meaning: a story for your own family. A story that belongs to you and only you.
 ## 2. Business Model
 
 - Retail price: $39.99 physical / $9.99 digital PDF
-- AI generation cost: ~$0.87 per book (GPT-4o $0.15 + 12 x DALL-E 3 $0.06)
-- Print + ship cost: $16.68 (Gelato 8x8" softcover $9.69 + shipping $6.99, US)
+- AI generation cost: ~$0.75 per book (GPT-4o + DALL-E 3)
+- Print + ship cost: ~$13.50 (Gelato A5 softcover)
 - Stripe fee: ~$1.46 (2.9% + $0.30)
 - Supabase storage: ~$0.09 per book
-- Net profit per book: ~$20.89 (52% gross margin)
-
-These are confirmed against a real Gelato draft order receipt (August 2026),
-not estimates. The earlier $13.50 print figure was for an A5 product that
-does not exist in Gelato's catalog.
+- Net profit per book: ~$24.19 (61% gross margin)
 - Digital PDF profit: ~$9.14 (91% margin)
 - Break-even: 6 book sales covers all setup costs (~$130 total capex)
 - Monthly fixed costs: $25/mo (Railway $5 + Vercel Pro $20)
@@ -182,7 +178,7 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 - Python GIL makes threading unreliable for CPU tasks
 - asyncio is native Python async -- no GIL issues for I/O
 - Semaphore(3) keeps us within OpenAI rate limits (3 parallel DALL-E calls max)
-- Generates all 12 illustrations in ~45-70 seconds instead of ~120 seconds sequential
+- Generates all 10 illustrations in ~35-55 seconds instead of ~100 seconds sequential
 
 ### Why Pillow not sharp (Node.js)
 - Pillow has native CMYK color mode -- essential for print
@@ -263,7 +259,7 @@ storykin/
 │   │   │       └── page.tsx        -- Flipbook viewer + watermark + checkout CTA
 │   │   ├── order/
 │   │   │   └── success/
-│   │   │       └── page.tsx        -- Post-payment success page (Stripe success_url)
+│   │   │       └── page.tsx        -- Post-payment success page
 │   │   ├── error-page/
 │   │   │   └── page.tsx            -- Generation/payment error page
 │   │   └── components/
@@ -274,20 +270,15 @@ storykin/
 │   ├── .env.local                  -- Local env vars (never commit)
 │   └── package.json
 ├── backend/
-│   ├── config.py                   -- Env validation + logging. Imported FIRST by main.py
-│   ├── main.py                     -- FastAPI app, all endpoints, CORS, rate limiting
+│   ├── main.py                     -- FastAPI app, all endpoints, CORS config
 │   ├── pipeline.py                 -- Full generation orchestration (story+images+DB)
-│   ├── fulfillment.py              -- Post-payment: build PDF -> Gelato print / email PDF
 │   ├── story_generator.py          -- GPT-4o story generation, Pydantic models
 │   ├── image_generator.py          -- DALL-E 3 async loop, Supabase upload
 │   ├── pdf_builder.py              -- ReportLab PDF, Pillow CMYK, Supabase upload
-│   ├── checkout.py                 -- Stripe session creation, Resend emails
-│   ├── gelato.py                   -- Gelato print order submission
-│   ├── migrations/                 -- Optional SQL to run in the Supabase SQL editor
-│   ├── Dockerfile                  -- python:3.11-slim, non-root user, uvicorn
-│   ├── .dockerignore               -- Keeps venv/.env out of the image
+│   ├── checkout.py                 -- Stripe session creation, Resend email
+│   ├── Dockerfile                  -- python:3.11-slim, pip install, uvicorn
 │   ├── railway.toml                -- Forces Dockerfile builder, sets start command
-│   ├── requirements.txt            -- All Python dependencies (pinned)
+│   ├── requirements.txt            -- All Python dependencies
 │   └── .env                       -- Local env vars (never commit)
 
 ---
@@ -300,10 +291,6 @@ Used by: Vercel frontend health check, monitoring
 
 ### POST /generate
 Creates job record, fires pipeline as background task, returns immediately.
-Rate limited per IP (default 5/hour, 20/day) because each call spends ~$0.75
-of OpenAI credit. Over the limit returns 429 with a Retry-After header.
-All fields are validated against the allowed values below — an invalid theme,
-pronoun, moral or an age outside 2-8 returns 422 and never reaches GPT-4o.
 Request body (all fields required except sidekick):
   child_name: str
   age: int (2-8)
@@ -317,54 +304,33 @@ Request body (all fields required except sidekick):
 Returns: {"job_id": "uuid"}
 
 ### GET /status/{job_id}
-Polled every 2 seconds by loading screen. 404 if the job does not exist.
+Polled every 2 seconds by loading screen.
 Returns: status, progress (0-100), current_page, error_message
 Status values: pending -> generating_story -> generating_images -> complete / failed
-progress: 10 (story starting) -> 30 (story done) -> 30..95 (one step per
-illustration) -> 100. current_page counts finished illustrations.
 
 ### GET /book/{job_id}
 Fetches complete book for preview page.
-404 if unknown, 409 if the book is not finished generating.
 Returns: child_name, title, pages[]
-Each page: page_number, page_text, image_url
+Each page: page_number, page_text, dalle_prompt, image_url
 
 ### POST /checkout
 Creates Stripe checkout session and returns redirect URL.
 Request: {"job_id": "uuid", "tier": "physical" or "digital"}
 Returns: {"checkout_url": "https://checkout.stripe.com/..."}
-409 if the job is not complete — you cannot sell a book that does not exist yet.
-Shipping address is only collected for the physical tier.
 
 ### POST /webhook
 Stripe webhook handler. Validates signature with STRIPE_WEBHOOK_SECRET.
-Returns 400 on a bad signature so Stripe retries instead of marking it delivered.
 Listens for: checkout.session.completed only.
-Idempotent — a repeated delivery for the same session_id is ignored, so Stripe
-retries can never create two orders or two print jobs for one payment.
 On payment:
-  1. Saves order to Supabase orders table (status: paid)
+  1. Saves order to Supabase orders table
   2. Sends confirmation email via Resend
-  3. Spawns fulfillment.fulfill_order as a background task and returns
-     immediately — building the PDF takes far longer than Stripe will wait
+  3. (Future) Submits Gelato print order
 
-### GET /admin/orders?status=paid
-Requires header X-Admin-Token: $ADMIN_TOKEN. Lists orders stuck in a status.
-Use status=fulfillment_failed to find orders that need attention.
+### GET /test-db
+Debug endpoint. Returns all jobs. Used during development only.
 
-### POST /admin/orders/{order_id}/fulfill
-Requires header X-Admin-Token: $ADMIN_TOKEN.
-Re-runs fulfilment for one order: rebuilds the PDF and re-submits to Gelato
-(physical) or re-sends the download email (digital). This is the recovery
-lever when a paid order failed to fulfil.
-
-### GET /test-db and POST /test-db
-Debug endpoints. Only registered when ENVIRONMENT is not "production" —
-they return 404 on Railway.
-
-NOTE: the old POST /generate-story endpoint was removed. It still called
-generate_story with a `gender` argument that no longer exists, so every
-call raised TypeError.
+### POST /test-db
+Debug endpoint. Creates a test job record. Used during development only.
 
 ---
 
@@ -376,7 +342,7 @@ status: text -- pending/generating_story/generating_images/complete/failed
 progress: integer -- 0 to 100
 current_page: integer -- which illustration is currently being painted
 child_data: JSONB -- all intake form fields as JSON
-story_data: JSONB -- full GPT-4o output (title + 12 pages with text and prompts)
+story_data: JSONB -- full GPT-4o output (title + 10 pages with text and prompts)
 image_urls: JSONB -- {"1": "https://...", "2": "https://...", ...}
 error_message: text -- populated if status=failed
 created_at: timestamptz (auto)
@@ -399,7 +365,7 @@ created_at, updated_at: timestamptz
 ### story_pages table
 id: UUID primary key
 job_id: UUID foreign key -> jobs.id
-page_number: integer (1-12)
+page_number: integer (1-10)
 page_text: text
 dalle_prompt: text (full prompt sent to DALL-E)
 image_url: text (permanent Supabase Storage URL)
@@ -465,7 +431,7 @@ Quality: standard (not hd -- saves cost, quality is sufficient)
 Parallelism: asyncio.gather with Semaphore(3)
   - Semaphore(3) = max 3 concurrent DALL-E calls
   - Stays within OpenAI Tier 1 rate limits (5 images/min)
-  - Total time: ~45-70 seconds for 12 illustrations
+  - Total time: ~35-55 seconds for 10 illustrations
 
 Image handling:
   1. Generate -> get temporary Azure URL (valid 2 hours)
@@ -474,35 +440,16 @@ Image handling:
   4. Store permanent public URL in story_pages table
 
 tenacity retry: 3 attempts per image
-Cost: ~$0.72 per book (12 x $0.06)
+Cost: ~$0.60 per book (10 x $0.06)
 
 ### Step 3: PDF generation (ReportLab + Pillow)
 
-Gelato 8x8" softcover photobook spec (verified against the live catalog):
-  Trim size: 200mm x 200mm square
+Gelato A5 softcover spec:
+  Page size: 148mm x 210mm
   Bleed: 3mm all sides
-  Interior page with bleed: 206mm x 206mm
-  Cover spread with bleed: 408.72mm x 206mm (back | spine | front)
-  Spine width: 2.72mm at 28 pages — grows with page count, so it is
-    fetched per book from the Gelato cover-dimensions endpoint
-  Interior page count: must be EVEN, minimum 28, maximum 200
+  Full size with bleed: 154mm x 216mm
+  Color: CMYK
   Resolution: 300 DPI
-
-The cover and the inner block are printed as two separate files. A single
-combined PDF is rejected.
-
-Interior structure (exactly 28 pages):
-  1        title page
-  2        colophon / imprint
-  3        dedication — "This book belongs to {name}"
-  4-27     12 spreads: full-bleed illustration (verso) + story text (recto)
-  28       "The End"
-
-Three PDFs are produced by pdf_builder.py:
-  build_cover_pdf()      -> the cover spread, print only
-  build_interior_pdf()   -> the 28 inner pages, print only
-  build_digital_pdf()    -> 29 pages (front cover + interior) for digital buyers,
-                            since digital buyers would otherwise get no cover
 
 image_to_reader() function:
   1. Download image from Supabase Storage URL
@@ -529,43 +476,21 @@ PDF upload:
   - format: {job_id}/storykin_book_{int(time.time())}.pdf
   - Uploaded to storykin-images Supabase Storage bucket
 
-### Step 4: Order fulfilment (automatic)
+### Step 4: Order fulfilment (partial)
 
-On Stripe checkout.session.completed (main.py):
-  1. Verify the signature, reject with 400 if bad
-  2. Skip if an order already exists for this session_id (Stripe retries)
-  3. Parse metadata: job_id, tier, child_name
+On Stripe checkout.session.completed:
+  1. Parse metadata: job_id, tier, child_name
+  2. Get customer email from session.customer_details
+  3. Get shipping address from session.shipping_details
   4. Insert into orders table (status: paid)
   5. Send confirmation email via Resend
-  6. Spawn fulfillment.fulfill_order and return 200 immediately
+  6. TODO: Submit Gelato API order with PDF URL
 
-fulfillment.fulfill_order (background, never raises):
-  1. Build the print-ready PDF in memory and upload it to Supabase Storage
-     (this is the step that used to be missing entirely — the PDF was only
-      ever built by running pdf_builder.py by hand)
-  2. Record the PDF URL on jobs.image_urls["pdf"]
-  3. Physical -> submit to Gelato, set gelato_order_id, status=printing
-     Digital  -> email the download link, status=delivered
-  4. Any failure -> status=fulfillment_failed, full traceback in Railway logs
-
-The PDF is deliberately built after payment, not during generation: most
-generated books are never bought, so building every one wastes time and storage.
-
-Gelato (v4 orders API, verified with a real draft order in August 2026):
-  - Endpoint: POST https://order.gelatoapis.com/v4/orders
-  - productUid (override with GELATO_PRODUCT_UID):
-      photobooks-softcover_pf_200x200-mm-8x8-inch
-      _pt_170-gsm-65lb-coated-silk_cl_4-4_ccl_4-4_bt_glued-left
-      _ct_matt-lamination_prt_1-0_cpt_250-gsm-100-lb-cover-coated-silk_ver
-  - pageCount: 28 (even, 28-200)
-  - files: [{"type": "cover", ...}, {"type": "default", ...}]
-      "cover" is the cover spread, "default" is the inner block
-  - shipmentMethodUid: "normal"
-  - Requires GELATO_API_KEY to be set on Railway
-
-To test the format without spending money, submit with "orderType": "draft".
-Gelato validates and prices the order without printing it, and the draft can
-be deleted with DELETE /v4/orders/{id}.
+Gelato integration (not yet built):
+  - API docs: https://dashboard.gelato.com/api-explorer
+  - Product: Softcover book, A5 format
+  - Need to: fetch PDF from Supabase Storage, submit to Gelato with shipping address
+  - Add to webhook handler in checkout.py after Step 5
 
 ---
 
@@ -618,7 +543,7 @@ Return ONLY valid JSON in this exact format:
   ]
 }
 
-Return exactly 12 pages. No extra text outside the JSON.
+Return exactly 10 pages. No extra text outside the JSON.
 ---
 
 System message: "You are a children's book author. You always return valid JSON exactly as requested."
@@ -693,7 +618,7 @@ Uses Suspense wrapper (required for useSearchParams in Next.js App Router)
 Polls $NEXT_PUBLIC_API_URL/status/{jobId} every 2000ms
 Status messages:
   generating_story -> "Writing the story..."
-  generating_images -> "Painting illustration {current_page} of 12..."
+  generating_images -> "Painting illustration {current_page} of 10..."
   complete -> "Your book is ready!" then redirect after 1500ms
   failed -> redirect to /error-page
 Progress bar uses CSS transition duration 1000ms for smooth animation
@@ -720,27 +645,8 @@ OPENAI_API_KEY=sk-proj-...
 STRIPE_SECRET_KEY=sk_test_... (switch to sk_live_... for production)
 STRIPE_WEBHOOK_SECRET=whsec_... (different for local CLI vs Railway)
 RESEND_API_KEY=re_...
-GELATO_API_KEY=...              (required for physical fulfilment)
-FRONTEND_URL=https://storykinbooks.com
+FRONTEND_URL=https://storykin-eta.vercel.app
 ENVIRONMENT=production
-
-Optional (sensible defaults if unset):
-ADMIN_TOKEN=...                 (enables /admin endpoints; 503 without it)
-ALLOWED_ORIGINS=...             (comma separated; defaults to the known frontends)
-RATE_LIMIT_PER_HOUR=5           (books per IP per hour on /generate)
-RATE_LIMIT_PER_DAY=20           (books per IP per day)
-RATE_LIMIT_ENABLED=true         (set false only for local load testing)
-FROM_EMAIL=Storykin <hello@storykinbooks.com>
-SUPPORT_EMAIL=hello@storykinbooks.com
-GELATO_PRODUCT_UID=softcover_book_perfect_binding_a5_portrait
-STORY_MODEL=gpt-4o
-MAX_CONCURRENT_IMAGES=3
-LOG_LEVEL=INFO
-
-The backend refuses to start if SUPABASE_URL, SUPABASE_SECRET_KEY,
-OPENAI_API_KEY, STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET is missing —
-it names the missing variable in the Railway logs rather than failing later
-with a confusing library error.
 
 ### frontend/.env.local (never commit to git)
 NEXT_PUBLIC_SUPABASE_URL=https://jweriwhordrjpffmmrcp.supabase.co
@@ -774,12 +680,12 @@ Railway uses: Stripe dashboard webhook endpoint -> use that whsec
 ## 16. Local Development
 
 ### Start backend
-cd /Users/A3014443/projects/storykin/backend
+cd /Users/A3014443/storykin/backend
 source venv/bin/activate
 uvicorn main:app --reload --port 8000
 
 ### Start frontend
-cd /Users/A3014443/projects/storykin/frontend
+cd /Users/A3014443/storykin/frontend
 npm run dev
 
 ### Start Stripe webhook listener (separate terminal)
@@ -802,7 +708,7 @@ python pipeline.py
 ### Build a PDF from existing job
 cd backend
 source venv/bin/activate
-python pdf_builder.py <job_id>
+python pdf_builder.py  -- update job_id in __main__ block first
 
 ### Check which Python/venv is active
 which python  -- should show .../storykin/backend/venv/bin/python
@@ -830,27 +736,13 @@ Then restart uvicorn in same terminal session.
 4. Click active deployment -> View logs
 5. Ctrl+F for the job_id to find specific errors
 
-### How to recover an order that failed to fulfil
-Fulfilment is automatic. An order only needs attention if its status is
-still "paid" long after payment, or is "fulfillment_failed".
-
-1. Find it:
-   curl -H "X-Admin-Token: $ADMIN_TOKEN" \
-     "https://storykin-production.up.railway.app/admin/orders?status=fulfillment_failed"
-   (or filter the orders table in Supabase on status)
-2. Read the cause in Railway logs — search the logs for the order id
-3. Fix the cause (e.g. missing GELATO_API_KEY, bad shipping address)
-4. Retry it:
-   curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" \
-     "https://storykin-production.up.railway.app/admin/orders/<order_id>/fulfill"
-5. Confirm status flips to printing (physical) or delivered (digital)
-
-Order statuses: paid -> printing / delivered, or fulfillment_failed.
-
-### How to build and send a book by hand (last resort)
-1. cd backend && source venv/bin/activate
-2. python pdf_builder.py <job_id>  -- prints the public PDF URL
-3. Email the URL to the customer, or upload it in the Gelato dashboard
+### How to manually trigger a Gelato order
+(Until Gelato is auto-connected)
+1. Go to Supabase -> orders table -> find the order
+2. Get the job_id
+3. Go to jobs table -> get the PDF URL from image_urls
+4. Go to Gelato dashboard -> create order manually
+5. Update orders table: set gelato_order_id, status=printing
 
 ### How to issue a refund in Stripe
 1. Go to https://dashboard.stripe.com/test/payments
@@ -901,61 +793,36 @@ Symptoms: httpx.ConnectError: CERTIFICATE_VERIFY_FAILED
 Fix: export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
 Production (Railway Docker python:3.11-slim) does NOT have this issue.
 
-### Gelato print format — validated, but never physically printed
-The product UID in the original code (softcover_book_perfect_binding_a5_portrait)
-did not exist. Every physical order would have failed with NOT_FOUND. It was
-replaced with a real 8x8" softcover photobook UID and validated end to end with
-a Gelato draft order, which returned HTTP 200 and a $16.68 contract receipt.
-
-Confirmed accepted: the product UID, pageCount 28, both file types
-("cover" and "default"), shipmentMethodUid "normal", and the shipping address
-mapped from Stripe's format.
-
-Still unproven: Gelato had not fetched or screened the PDF contents at draft
-stage (contentScreeningResults was empty), so deep file validation happens at
-production time. Our own checks confirm the interior is exactly 28 pages at
-206x206mm and the cover is 408.72x206mm — matching Gelato's own
-cover-dimensions response exactly — so the remaining risk is low. No book has
-been physically printed yet. Order one proof before promoting the physical
-tier hard.
+### Gelato API not yet connected
+PDF is built and uploaded to Supabase Storage.
+Gelato order submission not yet added to webhook handler.
+Next step: add Gelato API call in checkout.py after email send.
+Docs: https://dashboard.gelato.com/api-explorer
 
 ### Character consistency across illustrations
 DALL-E 3 has no memory between generations.
 Mitigation: style-anchor prompt + explicit character description every time.
 Future: img2img reference image or fine-tuned model.
 
-### Stripe live mode
-Live mode is approved and active (see Marketing History). Make sure the
-Railway STRIPE_WEBHOOK_SECRET matches the LIVE webhook endpoint's signing
-secret — a test-mode secret makes every live webhook fail signature
-verification, which now returns 400 and means paid orders never get fulfilled.
+### Stripe still in test mode
+All keys are sk_test_... and pk_test_...
+To go live: see "How to switch Stripe to live mode" in Operations section.
 
-### Resend domain verification
-Emails send from hello@storykinbooks.com (override with the FROM_EMAIL env var).
-If storykinbooks.com is not verified in Resend, delivery only works to
-storykin767@gmail.com — which would silently break digital fulfilment for
-real buyers. Verify the domain in Resend before selling the digital tier.
+### Resend domain not verified
+Emails sent from onboarding@resend.dev (Resend sandbox address).
+Limitation: can only send to storykin767@gmail.com in test mode.
+Fix: verify storykin.com in Resend -> update from address in checkout.py.
 
 ### SSH key clears on Mac restart
 Every time the Mac restarts, must run: ssh-add ~/.ssh/id_storykin
 Permanent fix attempted but Mac keychain integration with pyenv is unreliable.
 Workaround: add to ~/.zshrc: ssh-add ~/.ssh/id_storykin 2>/dev/null
 
-### Background work is still not fault-tolerant
-Generation and fulfilment both run as asyncio background tasks. Tasks are now
-held in a strong reference set so they can't be garbage collected mid-run, but
-a Railway restart still loses whatever was in flight.
-  - A lost generation: the job sits at generating_* and the loading screen
-    gives up after 4 minutes and sends the user to the error page.
-  - A lost fulfilment: the order sits at "paid" and is recoverable with
-    POST /admin/orders/{id}/fulfill (see the runbook).
+### asyncio.create_task background pipeline
+Currently uses FastAPI asyncio.create_task for background generation.
+Works but is not fault-tolerant -- if Railway restarts mid-generation, job is lost.
 Plan: migrate to Celery + Redis before significant traffic.
 Redis is available on Railway as a managed service.
-
-### Rate limiting is per-instance and in-memory
-/generate allows 5 books per IP per hour. The counters live in process memory,
-so they reset on deploy and would not be shared across multiple Railway
-instances. Fine for one instance; move to Redis when scaling out.
 
 ---
 
@@ -1020,95 +887,16 @@ Sprint 6 (Week 10-11) -- Launch
   Stripe webhook endpoint updated to Railway URL
   Full production test: book generated on real servers
 
-Sprint 7 (August 2026) -- Production hardening
-  FULFILMENT (the chain was broken end to end before this)
-    PDF was never built outside a manual script -- every physical order would
-      have failed at the Gelato step. Now built automatically after payment.
-    /order/success page created -- Stripe's success_url was a 404 for every
-      paying customer.
-    Digital tier now actually delivers: the PDF download link is emailed.
-    Webhook made idempotent -- a Stripe retry can no longer create two orders
-      or two print jobs for one payment.
-    Webhook returns 400 on a bad signature (was 200, so Stripe never retried).
-    Fulfilment runs in the background and records fulfillment_failed on error.
-    /admin/orders + /admin/orders/{id}/fulfill added to recover failed orders.
-  SAFETY
-    /generate rate limited per IP (5/hour, 20/day) -- it was open to anyone
-      and each call spends ~$0.75 of OpenAI credit.
-    Full input validation: age 2-8, enum themes/pronouns/morals, name length.
-      Free-text theme used to go straight into the GPT-4o prompt.
-    Debug /test-db endpoints hidden in production.
-    Backend refuses to start with missing credentials and names what's missing.
-    Background tasks held in a strong reference set (were GC-able mid-run).
-  CORRECTNESS
-    current_page is now actually written, so the loading screen counts real
-      illustrations instead of always saying "1 of 10".
-    Story validated for exactly 10 non-empty pages before it is saved.
-    PDF text shrinks to fit -- long pages used to run off the bottom.
-    Loading screen gives up after 4 minutes instead of polling forever.
-    Preview and create pages handle backend errors instead of hanging.
-    Removed the dead POST /generate-story endpoint (raised TypeError).
-  DEPLOY
-    railway.toml, .dockerignore, non-root Docker user, PYTHONUNBUFFERED.
-    All Python dependencies pinned.
-    Whole UI unified on the purple brand (create/loading/preview were amber).
-
-Sprint 8 (August 2026) -- The physical book actually exists
-  The Gelato product UID in the code was never real. Querying the catalog API
-    returned NOT_FOUND: every physical order would have failed at submission,
-    independent of the missing-PDF bug fixed in Sprint 7.
-  Gelato has no A5 book. The whole PDF pipeline was built to a size the
-    printer does not sell. Only three softcover photobook products are
-    actually orderable: 140x140mm, 200x200mm and 210x280mm.
-  Rebuilt on the real product: 8x8" (200x200mm) square softcover.
-    Story grew from 10 to 12 pages so the interior hits Gelato's 28-page
-    minimum with no blank filler:
-      title, colophon, dedication, 12 illustration+text spreads, "The End".
-    Cover and inner block are now two separate files, as Gelato requires.
-    Spine width is fetched per book from the cover-dimensions endpoint.
-    Digital buyers get a 29-page single file with the cover on the front,
-      instead of a coverless interior.
-    Typography rescaled for an 8-inch page (body text 16pt -> 22pt).
-  Validated with a real Gelato draft order: HTTP 200, product recognised,
-    both file types accepted, $16.68 contract receipt. Draft then deleted.
-  Unit economics corrected from measured data, not estimates:
-    print+ship is $16.68, not $13.50, so net margin is $20.89 (52%),
-    not $24.19 (61%).
-
----
-
-## 19b. Deploy Checklist (run through this before taking real orders)
-
-1. Set the new Railway variables:
-     GELATO_API_KEY   -- physical orders fail without it
-     ADMIN_TOKEN      -- long random string; enables the recovery endpoints
-     FRONTEND_URL     -- must be https://storykinbooks.com
-     ENVIRONMENT      -- must be exactly "production" to hide /test-db
-2. Confirm STRIPE_WEBHOOK_SECRET is the LIVE endpoint's secret, not the test
-   or CLI one. A mismatch now returns 400 and no order is ever fulfilled.
-3. Run backend/migrations/001_order_idempotency.sql in the Supabase SQL editor
-   (adds the unique index that makes duplicate orders impossible).
-4. Verify storykinbooks.com in Resend, or digital buyers get no email.
-5. Deploy backend and frontend, then check:
-     GET /health returns ok
-     GET /test-db returns 404 (proves ENVIRONMENT=production)
-6. Place one real end-to-end order of each tier:
-     digital  -- confirm the download email arrives and the PDF opens
-     physical -- confirm the order reaches the Gelato dashboard
-7. Watch Railway logs during both. Every step logs with the order id.
-
 ---
 
 ## 20. Roadmap (post-launch)
 
 ### Month 1 (after first 10 orders)
-  DONE: Gelato API connected for automatic print fulfilment (Sprint 7)
-  DONE: Stripe switched to live mode
-  DONE: $9.99 digital PDF delivered by email after payment (Sprint 7)
-  DONE: storykinbooks.com custom domain connected
-  Verify storykinbooks.com domain in Resend (still outstanding — blocks
-    digital delivery to anyone other than storykin767@gmail.com)
-  Place one real order of each tier to confirm the fulfilment chain
+  Connect Gelato API for automatic print fulfilment
+  Switch Stripe from test to live mode
+  Verify storykin.com domain in Resend
+  Add $9.99 digital PDF delivery by email (send PDF URL)
+  Buy and connect storykin.com custom domain
   Collect first UGC (offer 50% refund for unboxing video)
 
 ### Month 2
@@ -1211,7 +999,7 @@ GitHub: https://github.com/storykin767/storykin
 
 ---
 
-## 23. Marketing History
+## 17. Marketing History (Sprint 7 onwards)
 
 ### Current Status (as of April 2026)
 - Live at storykinbooks.com

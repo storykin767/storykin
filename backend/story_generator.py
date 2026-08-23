@@ -1,20 +1,13 @@
-import logging
-import os
-from typing import List
-
-from dotenv import load_dotenv
 from openai import OpenAI
-from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
+from pydantic import BaseModel
+from typing import List
+import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
-log = logging.getLogger("storykin.story")
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-STORY_MODEL = os.getenv("STORY_MODEL", "gpt-4o")
-EXPECTED_PAGES = 12
 
 # Pydantic models — define exactly what JSON we expect back
 class StoryPage(BaseModel):
@@ -85,10 +78,7 @@ Story guidance:
 - Use pronouns {subj}/{obj}/{poss} consistently throughout
 - Each page has 2-3 short sentences maximum (this is a picture book)
 - Language appropriate for age {age}
-- The story has a clear beginning, middle and end across all 12 pages:
-  pages 1-3 set up {child_name}'s world and the call to adventure,
-  pages 4-9 are the adventure and the problem to solve,
-  pages 10-12 resolve it and bring {child_name} safely home
+- The story has a clear beginning, middle and end
 - {child_name} is the hero who solves a problem or goes on an adventure
 - Warm, magical, joyful tone
 - Never mention AI or that this is generated
@@ -114,11 +104,11 @@ Return ONLY valid JSON in this exact format:
   ]
 }}
 
-Return exactly 12 pages. No extra text outside the JSON.
+Return exactly 10 pages. No extra text outside the JSON.
 """
 
     response = client.chat.completions.create(
-        model=STORY_MODEL,
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a children's book author. You always return valid JSON exactly as requested."},
             {"role": "user", "content": prompt}
@@ -128,39 +118,22 @@ Return exactly 12 pages. No extra text outside the JSON.
     )
 
     raw = response.choices[0].message.content
-    story = Story.model_validate_json(raw)
-
-    # A short book would break the PDF layout and shortchange the buyer,
-    # so let tenacity retry rather than shipping it
-    if len(story.pages) != EXPECTED_PAGES:
-        raise ValueError(
-            f"Expected {EXPECTED_PAGES} pages, model returned {len(story.pages)}"
-        )
-    story.pages.sort(key=lambda p: p.page_number)
-    for index, page in enumerate(story.pages, start=1):
-        page.page_number = index
-        if not page.page_text.strip() or not page.dalle_prompt.strip():
-            raise ValueError(f"Page {index} came back empty")
-
-    log.info("Story written: %s (%s pages)", story.title, len(story.pages))
-    return story
+    data = Story.model_validate_json(raw)
+    return data
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-
+    print("Generating story for Ava...")
     story = generate_story(
         child_name="Ava",
         age=4,
-        pronouns="she",
-        theme="dinosaur",
+        theme="dinosaur adventure",
         hair_color="curly red",
         eye_color="green",
-        skin_tone="light",
-        moral="bravery",
-        sidekick="Buster the Dog",
+        gender="girl"
     )
     print(f"\nTitle: {story.title}")
     print(f"Pages: {len(story.pages)}")
-    print(f"\nPage 1 text: {story.pages[0].page_text}")
-    print(f"\nPage 1 image prompt: {story.pages[0].dalle_prompt}")
+    print(f"\nPage 1:")
+    print(f"Text: {story.pages[0].page_text}")
+    print(f"\nImage prompt: {story.pages[0].dalle_prompt}")

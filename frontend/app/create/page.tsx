@@ -74,7 +74,6 @@ const SIDEKICK_TYPES = [
 export default function CreatePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
   const [form, setForm] = useState({
     child_name: '',
@@ -100,11 +99,10 @@ export default function CreatePage() {
 
   const handleSubmit = async () => {
     if (!form.child_name.trim()) {
-      setError("Please enter the child's name");
+      alert("Please enter the child's name");
       return;
     }
     setLoading(true);
-    setError('');
     try {
       const payload = {
         child_name: form.child_name,
@@ -124,30 +122,15 @@ export default function CreatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      if (res.status === 429) {
-        const data = await res.json().catch(() => ({}));
-        setError(
-          data.detail ||
-            "You've created a lot of books just now. Please try again in a little while."
-        );
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) throw new Error(`Generate failed (${res.status})`);
-
       const data = await res.json();
-      if (!data.job_id) throw new Error('No job id returned');
-
       router.push(`/loading?jobId=${data.job_id}`);
     } catch (err) {
-      console.error('Could not start generation:', err);
       router.push('/error-page');
     }
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
+    <main className="min-h-screen bg-gradient-to-b from-amber-50 to-white py-12 px-4">
       <div className="max-w-lg mx-auto">
 
         {/* Header */}
@@ -172,7 +155,7 @@ export default function CreatePage() {
               placeholder="e.g. Ava"
               value={form.child_name}
               onChange={e => update('child_name', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-gray-900 text-lg"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-900 text-lg"
             />
             <p className="text-xs text-gray-400 mt-2">
               🔒 We only use this name to write the story — we never store your child's personal data.
@@ -188,7 +171,7 @@ export default function CreatePage() {
               <select
                 value={form.age}
                 onChange={e => update('age', parseInt(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-gray-900"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-900"
               >
                 {[2,3,4,5,6,7,8].map(a => (
                   <option key={a} value={a}>{a} years old</option>
@@ -206,7 +189,7 @@ export default function CreatePage() {
                     onClick={() => update('pronouns', p.id)}
                     className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${
                       form.pronouns === p.id
-                        ? 'border-purple-600 bg-purple-50 text-purple-800'
+                        ? 'border-amber-400 bg-amber-50 text-amber-800'
                         : 'border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
                   >
@@ -230,7 +213,7 @@ export default function CreatePage() {
                   title={tone.label}
                   className={`w-10 h-10 rounded-full transition-all border-2 ${
                     form.skin_tone === tone.id
-                      ? 'border-purple-600 scale-110'
+                      ? 'border-amber-400 scale-110'
                       : 'border-transparent hover:border-gray-300'
                   }`}
                   style={{ backgroundColor: tone.color }}
@@ -251,7 +234,7 @@ export default function CreatePage() {
               <select
                 value={form.hair_color}
                 onChange={e => update('hair_color', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-gray-900"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-900"
               >
                 {HAIR_COLORS.map(h => (
                   <option key={h} value={h}>{h}</option>
@@ -265,7 +248,7 @@ export default function CreatePage() {
               <select
                 value={form.eye_color}
                 onChange={e => update('eye_color', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-gray-900"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-900"
               >
                 {EYE_COLORS.map(e => (
                   <option key={e} value={e}>{e}</option>
@@ -283,7 +266,7 @@ export default function CreatePage() {
               <button
                 onClick={() => update('has_sidekick', !form.has_sidekick)}
                 className={`relative w-11 h-6 rounded-full transition-all ${
-                  form.has_sidekick ? 'bg-purple-600' : 'bg-gray-200'
+                  form.has_sidekick ? 'bg-amber-400' : 'bg-gray-200'
                 }`}
               >
                 <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
@@ -292,7 +275,7 @@ export default function CreatePage() {
               </button>
             </div>
             {form.has_sidekick && (
-              <div className="grid grid-cols-2 gap-3 mt-3 p-4 bg-purple-50 rounded-xl">
+              <div className="grid grid-cols-2 gap-3 mt-3 p-4 bg-amber-50 rounded-xl">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Sidekick's name
@@ -302,7 +285,7 @@ export default function CreatePage() {
                     placeholder="e.g. Buster"
                     value={form.sidekick_name}
                     onChange={e => update('sidekick_name', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm text-gray-900 bg-white"
+                    className="w-full px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm text-gray-900 bg-white"
                   />
                 </div>
                 <div>
@@ -312,7 +295,7 @@ export default function CreatePage() {
                   <select
                     value={form.sidekick_type}
                     onChange={e => update('sidekick_type', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-sm text-gray-900 bg-white"
+                    className="w-full px-3 py-2 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm text-gray-900 bg-white"
                   >
                     {SIDEKICK_TYPES.map(s => (
                       <option key={s} value={s}>{s}</option>
@@ -331,7 +314,7 @@ export default function CreatePage() {
             <select
               value={form.moral}
               onChange={e => update('moral', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 text-gray-900"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-gray-900"
             >
               {MORALS.map(m => (
                 <option key={m.id} value={m.id}>{m.label}</option>
@@ -353,7 +336,7 @@ export default function CreatePage() {
                   onMouseLeave={() => setHoveredTheme(null)}
                   className={`p-4 rounded-xl border-2 text-left transition-all ${
                     form.theme === theme.id
-                      ? 'border-purple-600 bg-purple-50'
+                      ? 'border-amber-400 bg-amber-50'
                       : 'border-gray-100 hover:border-gray-200 bg-white'
                   }`}
                 >
@@ -372,16 +355,10 @@ export default function CreatePage() {
           </div>
 
           {/* Submit */}
-          {error && (
-            <p className="text-sm text-red-600 text-center mb-3" role="alert">
-              {error}
-            </p>
-          )}
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-4 text-white font-bold text-lg rounded-xl transition-all disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
+            className="w-full py-4 bg-amber-400 hover:bg-amber-500 disabled:bg-amber-200 text-white font-bold text-lg rounded-xl transition-all"
           >
             {ctaText}
           </button>
