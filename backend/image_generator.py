@@ -22,7 +22,9 @@ supabase: Client = create_client(
 MAX_CONCURRENT_IMAGES = int(os.getenv("MAX_CONCURRENT_IMAGES", "3"))
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+# reraise=True: see story_generator — keeps the underlying OpenAI error
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10),
+       reraise=True)
 async def generate_single_image(prompt: str, page_number: int) -> bytes:
     log.info("  Painting page %s...", page_number)
     response = await client.images.generate(

@@ -29,7 +29,10 @@ class Story(BaseModel):
     pages: List[StoryPage]
 
 # Retry up to 3 times with exponential backoff if API fails
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+# reraise=True: without it tenacity raises RetryError and the real cause
+# (e.g. an OpenAI content_policy_violation) never reaches the jobs table
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10),
+       reraise=True)
 def generate_story(
     child_name: str,
     age: int,

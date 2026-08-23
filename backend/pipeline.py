@@ -6,6 +6,7 @@ import ssl
 import certifi
 from dotenv import load_dotenv
 from supabase import Client, create_client
+from tenacity import RetryError
 
 from image_generator import generate_all_images
 from story_generator import generate_story
@@ -24,6 +25,33 @@ supabase: Client = create_client(
 TOTAL_PAGES = 12
 STORY_PROGRESS = 30      # progress once the story is written
 IMAGE_PROGRESS = 65      # progress budget shared across the illustrations
+
+
+def describe_failure(error: Exception) -> str:
+    """Turn an exception into something worth reading in the jobs table.
+
+    tenacity wraps retried failures in RetryError, whose str() is just an
+    object repr — that is why months of failed jobs recorded nothing useful.
+    The retries now reraise, but unwrap defensively in case one slips through.
+    """
+    if isinstance(error, RetryError):
+        try:
+            error = error.last_attempt.exception() or error
+        except Exception:
+            pass
+
+    detail = f"{type(error).__name__}: {error}".strip()
+
+    # OpenAI errors carry the useful part (e.g. content_policy_violation) in body
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error") or {}
+        code = err.get("code") or err.get("type")
+        message = err.get("message")
+        if code or message:
+            detail = f"{type(error).__name__} [{code}]: {message or error}"
+
+    return detail
 
 
 async def run_pipeline(job_id: str, child_data: dict) -> dict:
@@ -120,15 +148,16 @@ async def run_pipeline(job_id: str, child_data: dict) -> dict:
         }
 
     except Exception as e:
-        log.exception("[%s] Pipeline failed: %s", job_id, e)
+        detail = describe_failure(e)
+        log.exception("[%s] Pipeline failed: %s", job_id, detail)
         try:
             supabase.table("jobs").update({
                 "status": "failed",
-                "error_message": str(e)[:500],
+                "error_message": detail[:500],
             }).eq("id", job_id).execute()
         except Exception as db_error:
             log.error("[%s] Could not record failure: %s", job_id, db_error)
-        return {"success": False, "job_id": job_id, "error": str(e)}
+        return {"success": False, "job_id": job_id, "error": detail}
 
 
 if __name__ == "__main__":
