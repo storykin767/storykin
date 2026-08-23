@@ -18,8 +18,8 @@ const STAGES = [
 ];
 
 // Generation normally finishes in about a minute
-const SLOW_AFTER_MS = 100_000;
-const STALL_TIMEOUT_MS = 240_000;
+const SLOW_AFTER_MS = 180_000;
+const STALL_TIMEOUT_MS = 420_000;
 const MAX_CONSECUTIVE_FAILURES = 5;
 
 function LoadingContent() {
@@ -113,7 +113,7 @@ function LoadingContent() {
         <p className="text-gray-500 mb-10">
           {slow
             ? "Still working — the illustrations are taking a little longer than usual"
-            : "This takes about 60 seconds — we're making something special"}
+            : "This takes a couple of minutes — we're making something special"}
         </p>
 
         {/* Progress bar */}

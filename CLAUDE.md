@@ -458,14 +458,26 @@ Cost: ~$0.15 per book
 
 ### Step 2: Illustration generation (DALL-E 3)
 
-Model: dall-e-3
+Model: gpt-image-1 (override with IMAGE_MODEL)
 Size: 1024x1024
-Quality: standard (not hd -- saves cost, quality is sufficient)
+Quality: medium (override with IMAGE_QUALITY)
 
-Parallelism: asyncio.gather with Semaphore(3)
-  - Semaphore(3) = max 3 concurrent DALL-E calls
-  - Stays within OpenAI Tier 1 rate limits (5 images/min)
-  - Total time: ~45-70 seconds for 12 illustrations
+dall-e-3 WAS RETIRED by OpenAI. Every image call returned
+"The model 'dall-e-3' does not exist" and every book silently failed —
+this is what the 36 failed jobs in the table were. Do not switch back.
+gpt-image-2 also works but takes ~55s an image versus ~16s, which would
+blow the loading screen's timeout. quality=low renders the wrong eye
+colour often enough to matter on a personalised product.
+
+gpt-image-* return the image inline as base64, not as a temporary URL,
+so there is no longer an expiring link to download before it dies.
+
+Parallelism: asyncio.gather with Semaphore(3) AND a 5-per-minute limiter
+  - The organisation is capped at 5 images/minute. Semaphore(3) alone
+    attempts ~11/min and fails the book partway with a 429.
+  - MinuteRateLimiter paces calls; raise IMAGES_PER_MINUTE when OpenAI
+    raises the account tier.
+  - Total time: ~2-3 minutes for 12 illustrations at 5/min
 
 Image handling:
   1. Generate -> get temporary Azure URL (valid 2 hours)
@@ -474,7 +486,7 @@ Image handling:
   4. Store permanent public URL in story_pages table
 
 tenacity retry: 3 attempts per image
-Cost: ~$0.72 per book (12 x $0.06)
+Cost: ~$0.50 per book (12 x ~$0.042, gpt-image-1 medium)
 
 ### Step 3: PDF generation (ReportLab + Pillow)
 
