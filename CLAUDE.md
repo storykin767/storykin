@@ -936,6 +936,25 @@ If storykinbooks.com is not verified in Resend, delivery only works to
 storykin767@gmail.com — which would silently break digital fulfilment for
 real buyers. Verify the domain in Resend before selling the digital tier.
 
+### Never change the port the Dockerfile binds
+The Dockerfile must keep `--port 8000` hardcoded. Railway's HTTP proxy routes
+to port 8000 for this service, and it does not follow the app.
+
+Changing the CMD to `${PORT:-8000}` (to "do it properly") made uvicorn bind
+Railway's injected PORT instead. The container was perfectly healthy, Railway's
+own healthcheck passed, and the deployment showed green — but every public
+request returned 502 "Application failed to respond", because the proxy was
+still knocking on 8000. It cost a production outage and a full revert.
+
+Related: do NOT add a `startCommand` to railway.toml. Railway runs it without
+a shell, so `$PORT` is passed to uvicorn as a literal string and the container
+dies with "Invalid value for '--port'". The Dockerfile CMD is the single
+source of truth for how the app starts.
+
+Rule: any change to the Dockerfile or Railway config must be run as a real
+container first (`docker build` then `docker run -p 8000:8000`) and checked
+for which port it actually binds. A local venv cannot catch either failure.
+
 ### SSH key clears on Mac restart
 Every time the Mac restarts, must run: ssh-add ~/.ssh/id_storykin
 Permanent fix attempted but Mac keychain integration with pyenv is unreliable.
