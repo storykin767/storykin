@@ -11,3 +11,4 @@ reportlab==4.4.4
 pillow==11.3.0
 stripe==14.4.1
 resend==2.26.0
+sentry-sdk[fastapi]==2.42.0

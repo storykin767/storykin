@@ -726,6 +726,10 @@ ENVIRONMENT=production
 
 Optional (sensible defaults if unset):
 ADMIN_TOKEN=...                 (enables /admin endpoints; 503 without it)
+SENTRY_DSN=...                  (backend error monitoring; logs only if unset)
+SENTRY_TRACES_SAMPLE_RATE=0.1   (backend trace sampling)
+STALE_AFTER_MINUTES=15          (age at which in-flight work counts as orphaned)
+RECOVER_WINDOW_HOURS=24         (how far back startup recovery will look)
 ALLOWED_ORIGINS=...             (comma separated; defaults to the known frontends)
 RATE_LIMIT_PER_HOUR=5           (books per IP per hour on /generate)
 RATE_LIMIT_PER_DAY=20           (books per IP per day)
@@ -960,16 +964,31 @@ Every time the Mac restarts, must run: ssh-add ~/.ssh/id_storykin
 Permanent fix attempted but Mac keychain integration with pyenv is unreliable.
 Workaround: add to ~/.zshrc: ssh-add ~/.ssh/id_storykin 2>/dev/null
 
-### Background work is still not fault-tolerant
-Generation and fulfilment both run as asyncio background tasks. Tasks are now
-held in a strong reference set so they can't be garbage collected mid-run, but
-a Railway restart still loses whatever was in flight.
-  - A lost generation: the job sits at generating_* and the loading screen
-    gives up after 4 minutes and sends the user to the error page.
-  - A lost fulfilment: the order sits at "paid" and is recoverable with
-    POST /admin/orders/{id}/fulfill (see the runbook).
-Plan: migrate to Celery + Redis before significant traffic.
-Redis is available on Railway as a managed service.
+### Background work recovers on restart, but is not yet durable
+Generation and fulfilment run as asyncio background tasks, so a Railway
+restart still loses whatever is in flight. The app now heals itself on
+startup instead of leaving the damage in place:
+  - Jobs stuck in pending/generating_* for more than STALE_AFTER_MINUTES are
+    marked failed, so the loading screen sends the user to the error page
+    with a real reason instead of spinning.
+  - Orders still at "paid" after STALE_AFTER_MINUTES, and newer than
+    RECOVER_WINDOW_HOURS, have fulfilment restarted automatically.
+    The window deliberately excludes old rows: anything older needs a human,
+    and POST /admin/orders/{id}/fulfill is the lever for that.
+
+This covers the actual failure mode (a restart) without new infrastructure.
+It does NOT make the work durable: a task interrupted mid-run still restarts
+from the beginning, and nothing survives if the app never comes back up.
+Celery + Redis remains the real fix before significant traffic — Redis is
+available on Railway as a managed service — but it adds a worker service and
+a second deploy surface, which is not worth it at current volume.
+
+### Backend error monitoring
+Set SENTRY_DSN on Railway to send backend exceptions to Sentry. Without it
+they exist only in the Railway log buffer, which is not searchable after the
+fact. Create a separate Python project in Sentry rather than reusing the
+javascript-nextjs DSN. send_default_pii is off: customer emails and shipping
+addresses must not leave our own systems.
 
 ### Rate limiting is per-instance and in-memory
 /generate allows 5 books per IP per hour. The counters live in process memory,

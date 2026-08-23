@@ -3,6 +3,8 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 # config must be imported first: it validates credentials before any
@@ -23,9 +25,84 @@ from pipeline import run_pipeline
 log = logging.getLogger("storykin.api")
 
 # Swagger would advertise the admin endpoints to anyone who looks
+# ── Recovery from an interrupted restart ──────────────────────
+# Generation and fulfilment run as background tasks, so a Railway restart
+# loses whatever was in flight. Rather than leave a job spinning forever or
+# a paid order unfulfilled, sweep both on startup.
+STALE_AFTER_MINUTES = int(os.getenv("STALE_AFTER_MINUTES", "15"))
+RECOVER_WINDOW_HOURS = int(os.getenv("RECOVER_WINDOW_HOURS", "24"))
+IN_FLIGHT = ["pending", "generating_story", "generating_images"]
+
+
+def _utc(delta: timedelta) -> str:
+    return (datetime.now(timezone.utc) - delta).isoformat()
+
+
+def fail_interrupted_jobs() -> int:
+    """A job stuck mid-generation will never resume — tell the user."""
+    stuck = supabase.table("jobs").select("id").in_("status", IN_FLIGHT)\
+        .lt("updated_at", _utc(timedelta(minutes=STALE_AFTER_MINUTES)))\
+        .execute()
+    for job in stuck.data:
+        supabase.table("jobs").update({
+            "status": "failed",
+            "error_message": "Generation was interrupted by a server restart.",
+        }).eq("id", job["id"]).execute()
+    return len(stuck.data)
+
+
+async def restart_unfulfilled_orders() -> int:
+    """A paid order still sitting at 'paid' never got its book built.
+
+    Bounded to the recent past: anything older needs a human, and the
+    /admin endpoints exist for that.
+    """
+    orders = supabase.table("orders").select("*").eq("status", "paid")\
+        .lt("created_at", _utc(timedelta(minutes=STALE_AFTER_MINUTES)))\
+        .gt("created_at", _utc(timedelta(hours=RECOVER_WINDOW_HOURS)))\
+        .execute()
+    for order in orders.data:
+        spawn(fulfil_order_row(order))
+    return len(orders.data)
+
+
+async def fulfil_order_row(order: dict) -> None:
+    """Run fulfilment for an existing order row (used by recovery and admin)."""
+    job = supabase.table("jobs").select("child_data, story_data")\
+        .eq("id", order["job_id"]).single().execute()
+    shipping = order.get("shipping_address") or {}
+    await fulfill_order(
+        order_id=order["id"],
+        job_id=order["job_id"],
+        tier=order.get("order_type", "physical"),
+        customer_email=order.get("customer_email"),
+        child_name=(job.data.get("child_data") or {}).get("child_name", "your child"),
+        story_title=(job.data.get("story_data") or {}).get("title", "your storybook"),
+        customer_name=shipping.get("name", ""),
+        shipping_address=shipping,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        stale = await asyncio.to_thread(fail_interrupted_jobs)
+        if stale:
+            log.warning("Marked %s interrupted job(s) as failed", stale)
+        resumed = await restart_unfulfilled_orders()
+        if resumed:
+            log.warning("Restarted fulfilment for %s unfulfilled order(s)", resumed)
+        if not stale and not resumed:
+            log.info("Startup recovery: nothing to recover")
+    except Exception as e:
+        log.exception("Startup recovery failed (continuing anyway): %s", e)
+    yield
+
+
 app = FastAPI(
     title="Storykin API",
     version="1.0.0",
+    lifespan=lifespan,
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
     openapi_url=None if IS_PRODUCTION else "/openapi.json",
@@ -345,20 +422,7 @@ async def admin_fulfill(order_id: str, request: Request):
     except Exception:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    job = supabase.table("jobs").select("child_data, story_data")\
-        .eq("id", order.data["job_id"]).single().execute()
-    shipping = order.data.get("shipping_address") or {}
-
-    spawn(fulfill_order(
-        order_id=order_id,
-        job_id=order.data["job_id"],
-        tier=order.data["order_type"],
-        customer_email=order.data.get("customer_email"),
-        child_name=(job.data.get("child_data") or {}).get("child_name", "your child"),
-        story_title=(job.data.get("story_data") or {}).get("title", "your storybook"),
-        customer_name=shipping.get("name", ""),
-        shipping_address=shipping,
-    ))
+    spawn(fulfil_order_row(order.data))
 
     log.info("[%s] Manual fulfilment retry requested", order_id)
     return {"order_id": order_id, "status": "fulfilment restarted"}
