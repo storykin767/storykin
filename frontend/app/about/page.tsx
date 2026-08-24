@@ -203,7 +203,7 @@ export default function AboutPage() {
         <div className="flex justify-center gap-6 mb-4">
           <Link href="/" className="hover:text-gray-600">Home</Link>
           <Link href="/create" className="hover:text-gray-600">Create a book</Link>
-          <Link href="/about" className="hover:text-gray-600">About</Link>
+          <Link href="/refund-policy" className="hover:text-gray-600">Refunds</Link>
         </div>
         <p>Storykin — every child deserves their own story</p>
       </footer>

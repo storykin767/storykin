@@ -118,8 +118,9 @@ def send_confirmation_email(
         delivery_text = "Your digital PDF will be emailed to you within a few minutes."
         subject = f"{child_name}'s storybook is ready!"
     else:
-        delivery_text = ("Your book is being printed and will be shipped "
-                         "within 2-3 business days.")
+        delivery_text = ("Your book is going to print now. It is dispatched "
+                         "within 2-4 business days and we will email you when "
+                         "it is on its way.")
         subject = f"{child_name}'s storybook is on its way!"
 
     body = f"""

@@ -20,17 +20,17 @@ const STEPS = [
   {
     emoji: '📦',
     title: 'We print and ship it',
-    desc: 'A beautiful softcover book delivered to your door in 2-3 days.'
+    desc: 'A beautiful softcover book, printed and posted to your door.'
   },
 ];
 
 const THEMES = [
-  { emoji: '🦕', label: 'Dinosaur Adventure' },
-  { emoji: '🚀', label: 'Space Explorer' },
-  { emoji: '🧜', label: 'Ocean Magic' },
-  { emoji: '🌲', label: 'Enchanted Forest' },
-  { emoji: '⚡', label: 'Superhero' },
-  { emoji: '👑', label: 'Magical Kingdom' },
+  { emoji: '🦕', label: 'Dinosaur Adventure', id: 'dinosaur' },
+  { emoji: '🚀', label: 'Space Explorer', id: 'space' },
+  { emoji: '🧜', label: 'Ocean Magic', id: 'mermaid' },
+  { emoji: '🌲', label: 'Enchanted Forest', id: 'forest' },
+  { emoji: '⚡', label: 'Superhero', id: 'superhero' },
+  { emoji: '👑', label: 'Magical Kingdom', id: 'princess' },
 ];
 
 const FAQS = [
@@ -44,7 +44,7 @@ const FAQS = [
   },
   {
     q: 'How long does delivery take?',
-    a: 'Books are printed within 24 hours of your order and delivered in 2-3 business days within the US. International shipping takes 5-7 days.'
+    a: 'Your book goes to print as soon as you order. Printing and dispatch take 2-4 business days, and delivery time after that depends on where you are — our print partner has presses in 32 countries, so most orders ship from close to home. You will get a confirmation email at each step.'
   },
   {
     q: 'What age is this suitable for?',
@@ -52,7 +52,7 @@ const FAQS = [
   },
   {
     q: 'What if I am not happy with the book?',
-    a: "If the printed book does not meet your expectations, contact us within 14 days and we will reprint or refund it. No questions asked."
+    a: "If the printed book arrives damaged, misprinted, or simply is not what you hoped for, email us within 14 days of delivery and we will reprint it or refund you in full. Full terms are on our refund policy page."
   },
   {
     q: "Is my child's data safe?",
@@ -119,7 +119,7 @@ export default function HomePage() {
                   "name": "How long does delivery take?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Books are printed within 24 hours and delivered in 2-3 business days within the US."
+                    "text": "Printing and dispatch take 2-4 business days. Delivery time after that depends on the destination country."
                   }
                 },
                 {
@@ -190,8 +190,8 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-8 text-white text-sm font-medium">
           <span>📚 100% personalised — no templates</span>
           <span>👀 Preview before you pay</span>
-          <span>🚚 Delivered in 2-3 days</span>
-          <span>💛 Money-back guarantee</span>
+          <span>🚚 Printed and shipped worldwide</span>
+          <span>💛 14-day reprint or refund</span>
         </div>
       </section>
 
@@ -238,14 +238,15 @@ export default function HomePage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
             {THEMES.map(theme => (
-              <div
+              <Link
                 key={theme.label}
-                className="bg-white rounded-2xl p-6 border border-purple-100 hover:border-purple-300 transition-all"
+                href={`/books/${theme.id}`}
+                className="bg-white rounded-2xl p-6 border border-purple-100 hover:border-purple-300 transition-all block"
                 style={{ background: 'white' }}
               >
                 <div className="text-4xl mb-2">{theme.emoji}</div>
                 <p className="font-medium text-gray-800 text-sm">{theme.label}</p>
-              </div>
+              </Link>
             ))}
           </div>
           <Link
@@ -271,16 +272,18 @@ export default function HomePage() {
             Perfect for birthdays, baby showers, Christmas and every
             special moment in between.
           </p>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             {[
-              { emoji: '🎂', label: 'Birthdays' },
-              { emoji: '🎄', label: 'Christmas' },
-              { emoji: '👶', label: 'Baby showers' },
+              { emoji: '🎂', label: 'Birthdays', slug: 'birthday' },
+              { emoji: '🎄', label: 'Christmas', slug: 'christmas' },
+              { emoji: '👶', label: 'Baby showers', slug: 'baby-shower' },
+              { emoji: '💛', label: 'From grandparents', slug: 'grandparent' },
             ].map(o => (
-              <div key={o.label} className="p-4 rounded-2xl" style={{ background: '#F5F3FF' }}>
+              <Link key={o.label} href={`/gifts/${o.slug}`}
+                className="p-4 rounded-2xl block hover:opacity-80 transition-all" style={{ background: '#F5F3FF' }}>
                 <div className="text-3xl mb-1">{o.emoji}</div>
                 <p className="text-sm font-medium text-gray-700">{o.label}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -306,8 +309,8 @@ export default function HomePage() {
                   '28-page 8×8" softcover book',
                   '12 full-page illustrations',
                   'Printed at 300 DPI',
-                  'Delivered in 2-3 days',
-                  'Money-back guarantee',
+                  'Printed and posted worldwide',
+                  '14-day reprint or refund',
                 ].map(f => (
                   <li key={f} className="flex items-center gap-2">
                     <span style={{ color: '#7C3AED' }}>✓</span>{f}
@@ -399,6 +402,7 @@ export default function HomePage() {
         <div className="flex justify-center gap-6 mt-5 text-sm text-gray-500">
           <Link href="/about" className="hover:text-purple-700 transition-all">About</Link>
           <Link href="/create" className="hover:text-purple-700 transition-all">Create a book</Link>
+          <Link href="/refund-policy" className="hover:text-purple-700 transition-all">Refunds</Link>
           <a href="mailto:hello@storykinbooks.com" className="hover:text-purple-700 transition-all">Contact</a>
         </div>
         <p className="text-gray-300 text-xs mt-5">© 2026 Storykin. All rights reserved.</p>

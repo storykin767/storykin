@@ -18,7 +18,7 @@ const STEPS = [
   {
     emoji: '📦',
     title: 'It arrives',
-    desc: 'Printed books ship within 2-3 business days. Digital PDFs arrive by email in minutes.',
+    desc: 'Printed books go to press right away and dispatch within 2-4 business days. Digital PDFs arrive by email in minutes.',
   },
 ];
 
