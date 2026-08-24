@@ -140,13 +140,18 @@ export default function HomePage() {
             <Logo size={36}/>
             <span className="text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
           </div>
-          <Link
-            href="/create"
-            className="px-5 py-2 text-white font-medium rounded-xl transition-all text-sm"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
-          >
-            Create a book
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link href="/about" className="text-sm font-medium text-gray-600 hover:text-purple-700 transition-all">
+              About
+            </Link>
+            <Link
+              href="/create"
+              className="px-5 py-2 text-white font-medium rounded-xl transition-all text-sm"
+              style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
+            >
+              Create a book
+            </Link>
+          </div>
         </nav>
 
       {/* Hero */}
@@ -391,7 +396,12 @@ export default function HomePage() {
       <footer className="px-6 py-8 border-t border-gray-100 text-center">
         <p className="text-2xl font-bold mb-2" style={{ color: '#7C3AED' }}>Storykin</p>
         <p className="text-gray-400 text-sm">Every child deserves their own story</p>
-        <p className="text-gray-300 text-xs mt-4">© 2026 Storykin. All rights reserved.</p>
+        <div className="flex justify-center gap-6 mt-5 text-sm text-gray-500">
+          <Link href="/about" className="hover:text-purple-700 transition-all">About</Link>
+          <Link href="/create" className="hover:text-purple-700 transition-all">Create a book</Link>
+          <a href="mailto:hello@storykinbooks.com" className="hover:text-purple-700 transition-all">Contact</a>
+        </div>
+        <p className="text-gray-300 text-xs mt-5">© 2026 Storykin. All rights reserved.</p>
       </footer>
 
     </main>
