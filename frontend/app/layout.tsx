@@ -50,6 +50,11 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+  other: {
+    // Pinterest domain claim — enables Rich Pins, our logo on every pin from
+    // the site, and analytics on pins other people create from our pages.
+    'p:domain_verify': 'fe90b174568c44dd7bb692b4749ff2c6',
+  },
 }
 
 export default function RootLayout({
