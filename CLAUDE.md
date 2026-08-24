@@ -1149,6 +1149,56 @@ Sprint 8 (August 2026) -- The physical book actually exists
 
 ---
 
+## 19c. Current State (as of 23 August 2026)
+
+Written down because it is easy to mistake a deliberate decision for an
+oversight when picking this up later.
+
+### Proven end to end, with real data, in production
+- Book generation: 12 pages, 12 illustrations, ~160 seconds through the live
+  site. Character stays consistent across pages with gpt-image-1.
+- Digital fulfilment: PDF built, uploaded, Resend email received in an inbox.
+  The whole chain in fulfillment.py has been exercised for real.
+- Print files: a real cover and interior from a generated book were accepted
+  by a Gelato draft order. Contract receipt $16.68 ($9.69 + $6.99 US shipping).
+
+### Parked deliberately, not forgotten
+- ONE LIVE DIGITAL ORDER ($9.99). The only untested part is live Stripe
+  checkout and the live webhook signature — the handler logic itself is
+  covered by tests that sign real HMAC payloads.
+- ONE PHYSICAL PROOF ($39.99). No book has ever been physically printed.
+  This is also the only way to answer the print-quality question below.
+  A physical order proves the Stripe path too, so it answers both at once.
+
+### Known open question: print resolution
+Illustrations are 1024x1024, which is about 130 DPI on an 8 inch page, against
+the 300 DPI in the spec above. gpt-image-1 maxes at 1024 for square images.
+Options are upscaling (meets the number, adds no detail), a non-square format,
+or accepting it. Watercolour is forgiving of low resolution in a way line art
+is not. DECIDE THIS WHEN THE PHYSICAL PROOF ARRIVES, not from theory.
+
+### Throughput ceiling — raise before any marketing
+The OpenAI organisation is capped at 5 images/minute, so roughly 25 books/hour
+and ~2.7 minutes per book. Planned action: raise the usage tier on
+1 SEPTEMBER 2026. Tiers advance on cumulative paid spend, not on a support
+request — pre-buying credit under Billing counts toward the threshold. At
+~$0.50 a book, $50 of credit is 100 books and also advances a tier.
+
+AFTER raising the tier, increase IMAGES_PER_MINUTE in the Railway variables to
+match. It is already an env var, so this is config, not a deploy. Raising the
+tier alone changes nothing — the limiter keeps pacing at 5/min until that
+variable moves.
+
+### Deferred with reasoning
+- Celery + Redis for durable background work. The startup recovery in main.py
+  covers the failure that actually happens (a Railway restart). Celery adds a
+  worker service and a second deploy surface, which is not worth it at zero
+  orders. Revisit before significant traffic.
+- Redis-backed rate limiting. Needs Redis, so it follows Celery. With one
+  replica the only symptom is counters resetting on deploy.
+
+---
+
 ## 20. Roadmap (post-launch)
 
 ### Month 1 (after first 10 orders)
@@ -1244,6 +1294,14 @@ save it as CLAUDE.md in the repo root (Claude Code reads it automatically).
 - The exact GPT-4o prompt and why each line is there
 - The business model, unit economics, and GTM strategy
 - The full sprint history and what was built when
+
+### How this founder likes to work
+On multi-step checks that span several tools — pre-deploy verification,
+dashboard configuration — go ONE STEP AT A TIME and wait for the result before
+giving the next step. This was asked for explicitly, and it earns its keep:
+working this way is what caught the Stripe webhook sitting in a sandbox rather
+than live mode, and the Resend domain having been in a failed state for five
+months. Both would have been skimmed past in a batched checklist.
 
 ### Starting a new session
 Say: "Continue building Storykin" and paste this file.
