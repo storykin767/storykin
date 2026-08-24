@@ -22,6 +22,39 @@
 
 ---
 
+## Which group gets which post
+
+Five groups joined and approved (from CLAUDE.md section 23).
+
+| Group | Status | Post to use |
+|---|---|---|
+| **Baby shower gift ideas** | not yet posted | **Post 1** below |
+| **Moms of toddlers** | not yet posted | **Post 2** below |
+| **Grandparents love their grandchildren** | not yet posted | **Post 3** below |
+| Grandparents raising grandchildren | already posted (April 2026) | see note |
+| Gift ideas for newborns baby & kids | already posted (April 2026) | see note |
+
+Suggested order, one per day: **Grandparents love their grandchildren** first
+(best audience match and the strongest landing page), then **Baby shower gift
+ideas**, then **Moms of toddlers**.
+
+### Note on the two groups already posted to
+
+Those posts went up in April 2026, when book generation was broken — anyone who
+clicked through would have filled in the form and watched it fail. Those
+audiences saw the worst possible version of the product.
+
+Do **not** immediately repost the same pitch. Instead, wait a few weeks and
+post something genuinely new rather than a repeat: a photograph of a printed
+book once the physical proof arrives, which is a different post rather than
+the same one again. Reposting the same thing to a group that has already seen
+it is the fastest way to get removed.
+
+"Grandparents raising grandchildren" is worth returning to — it is the closest
+match to the primary buyer of any group on the list.
+
+---
+
 ## Post 1 — "Baby shower gift ideas"
 
 **Link for first comment:** https://storykinbooks.com/gifts/baby-shower
