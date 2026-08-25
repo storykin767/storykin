@@ -121,17 +121,17 @@ export default function PreviewPage() {
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between gap-2 mb-8">
           <button
             onClick={() => setCurrentPage(p => p - 1)}
             disabled={isFirst}
-            className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium disabled:opacity-30 hover:bg-gray-50 transition-all"
+            className="px-4 sm:px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium disabled:opacity-30 hover:bg-gray-50 transition-all flex-shrink-0"
           >
             Previous
           </button>
 
           {/* Page dots */}
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5 justify-center min-w-0">
             {pages.map((_, i) => (
               <button
                 key={i}
@@ -147,7 +147,7 @@ export default function PreviewPage() {
           <button
             onClick={() => setCurrentPage(p => p + 1)}
             disabled={isLast}
-            className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium disabled:opacity-30 hover:bg-gray-50 transition-all"
+            className="px-4 sm:px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-medium disabled:opacity-30 hover:bg-gray-50 transition-all flex-shrink-0"
           >
             Next
           </button>
