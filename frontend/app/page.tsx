@@ -136,12 +136,12 @@ export default function HomePage() {
         />
       {/* Nav */}
         <nav className="flex items-center justify-between px-6 py-4 border-b border-purple-100 bg-white">
-          <div className="flex items-center gap-2">
-            <Logo size={36}/>
-            <span className="text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link href="/about" className="text-sm font-medium text-gray-600 hover:text-purple-700 transition-all">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+            <Logo size={32}/>
+            <span className="text-xl sm:text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
+          </Link>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <Link href="/about" className="hidden sm:block text-sm font-medium text-gray-600 hover:text-purple-700 transition-all">
               About
             </Link>
             <Link
@@ -162,12 +162,12 @@ export default function HomePage() {
               <span>✨</span>
               <span>The only book written just for your child</span>
             </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-5 leading-tight">
             A storybook where
             <span style={{ color: '#7C3AED' }}> your child </span>
             is the hero
           </h1>
-          <p className="text-xl text-gray-500 mb-10 leading-relaxed">
+          <p className="text-base sm:text-xl text-gray-500 mb-8 leading-relaxed">
             We write and illustrate a completely personalised children's book
             starring your child — printed and delivered to your door.
             The perfect gift for any occasion.
@@ -177,8 +177,25 @@ export default function HomePage() {
             className="inline-block px-10 py-5 text-white font-bold text-xl rounded-2xl transition-all shadow-lg"
             style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
           >
-            Create your book — $39.99
+            See a free preview
           </Link>
+          {/* Real books, above the fold. Everything below was text and emoji. */}
+          <div className="mt-10 mb-2 grid grid-cols-2 gap-3 sm:gap-5 max-w-md mx-auto">
+            <img
+              src="/samples/cover-noor.jpg"
+              alt="A personalised storybook cover reading Noor's Cosmic Adventure"
+              width={760} height={760}
+              className="w-full rounded-2xl shadow-lg"
+            />
+            <img
+              src="/samples/cover-ava.jpg"
+              alt="A personalised storybook cover reading Ava and the Dinosaur Adventure"
+              width={760} height={760}
+              className="w-full rounded-2xl shadow-lg"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mb-8">Two real books, made for two real children.</p>
+
           <p className="text-sm text-gray-400 mt-4">
             Preview the complete book before you pay. Takes 60 seconds to create.
           </p>
@@ -233,9 +250,21 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
             6 magical themes to choose from
           </h2>
-          <p className="text-gray-500 mb-10">
+          <p className="text-gray-500 mb-8">
             Every theme comes with a completely unique story and illustrations
           </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
+            {['art-1','art-2','art-3','art-4'].map((a) => (
+              <img
+                key={a}
+                src={`/samples/${a}.jpg`}
+                alt="An illustration from a personalised Storykin book"
+                width={760} height={760}
+                loading="lazy"
+                className="w-full rounded-xl shadow-sm"
+              />
+            ))}
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
             {THEMES.map(theme => (
               <Link
