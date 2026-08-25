@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Logo from '../../components/Logo';
 import { notFound } from 'next/navigation';
 import { OCCASION_PAGES, occasionBySlug } from '../../content/occasions';
 import { THEME_PAGES } from '../../content/themes';
@@ -41,7 +42,10 @@ export default async function OccasionPage({ params }: { params: Promise<{ occas
       })}} />
 
       <nav className="flex items-center justify-between px-6 py-4 border-b border-purple-100">
-        <Link href="/" className="text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</Link>
+        <Link href="/" className="flex items-center gap-2">
+          <Logo size={34} />
+          <span className="text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
+        </Link>
         <Link href="/create" className="px-5 py-2.5 text-white text-sm font-semibold rounded-xl"
           style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}>Create a book</Link>
       </nav>

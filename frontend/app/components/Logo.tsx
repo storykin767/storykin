@@ -1,17 +1,25 @@
 export default function Logo({ size = 40 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Book base */}
-      <rect x="6" y="8" width="28" height="26" rx="3" fill="#7C3AED"/>
-      {/* Book spine */}
-      <rect x="6" y="8" width="5" height="26" rx="2" fill="#6D28D9"/>
-      {/* Pages */}
-      <rect x="13" y="12" width="16" height="2" rx="1" fill="white" opacity="0.8"/>
-      <rect x="13" y="17" width="16" height="2" rx="1" fill="white" opacity="0.6"/>
-      <rect x="13" y="22" width="10" height="2" rx="1" fill="white" opacity="0.4"/>
-      {/* Star */}
-      <circle cx="30" cy="12" r="6" fill="#FCD34D"/>
-      <path d="M30 7.5L31.2 10.8H34.5L31.8 12.9L32.9 16.2L30 14.1L27.1 16.2L28.2 12.9L25.5 10.8H28.8L30 7.5Z" fill="#F59E0B"/>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Storykin"
+    >
+      {/* Left page */}
+      <path d="M32 22C26 17 18 16 12 17.5V47C18 45.5 26 46.5 32 51V22Z" fill="#7C3AED" />
+      {/* Right page */}
+      <path d="M32 22C38 17 46 16 52 17.5V47C46 45.5 38 46.5 32 51V22Z" fill="#9333EA" />
+      {/* Spine */}
+      <path d="M32 22V51" stroke="#5B21B6" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Star rising from the page */}
+      <path
+        d="M32 3.5L35.4 12.3L44.5 12.9L37.4 18.9L39.7 28L32 22.9L24.3 28L26.6 18.9L19.5 12.9L28.6 12.3L32 3.5Z"
+        fill="#FCD34D"
+      />
     </svg>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Logo from '../components/Logo';
 
 const THEMES = [
   {
@@ -152,6 +154,10 @@ export default function CreatePage() {
 
         {/* Header */}
         <div className="text-center mb-10">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6">
+            <Logo size={32} />
+            <span className="text-xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
+          </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Create your book
           </h1>

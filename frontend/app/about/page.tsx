@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Logo from '../components/Logo';
 
 export const metadata: Metadata = {
   title: 'About Storykin — Personalised Storybooks Made For One Child',
@@ -66,8 +67,9 @@ export default function AboutPage() {
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-purple-100">
-        <Link href="/" className="text-2xl font-bold" style={{ color: '#6B21A8' }}>
-          Storykin
+        <Link href="/" className="flex items-center gap-2">
+          <Logo size={34} />
+          <span className="text-2xl font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
         </Link>
         <Link
           href="/create"

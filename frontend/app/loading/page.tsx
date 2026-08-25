@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Logo from '../components/Logo';
 import { Suspense } from 'react';
 
 const STAGES = [
@@ -103,7 +104,11 @@ function LoadingContent() {
     <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
 
-        {/* Animated book icon */}
+        {/* Brand + animated book icon */}
+        <div className="flex items-center justify-center gap-2 mb-10">
+          <Logo size={28} />
+          <span className="text-lg font-bold" style={{ color: '#6B21A8' }}>Storykin</span>
+        </div>
         <div className="text-8xl mb-8 animate-bounce">📖</div>
 
         {/* Dynamic message */}
