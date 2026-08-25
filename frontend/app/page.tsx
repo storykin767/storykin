@@ -155,10 +155,10 @@ export default function HomePage() {
         </nav>
 
       {/* Hero */}
-      <section className="px-6 py-20 text-center" style={{ background: 'linear-gradient(180deg, #F5F3FF 0%, #ffffff 100%)' }}>
+      <section className="px-6 pt-8 pb-14 sm:py-20 text-center" style={{ background: 'linear-gradient(180deg, #F5F3FF 0%, #ffffff 100%)' }}>
         <div className="max-w-2xl mx-auto">
             <div className="inline-flex items-center gap-2 font-semibold px-6 py-3 rounded-full mb-6 shadow-sm"
-              style={{ background: '#7C3AED', color: '#ffffff', fontSize: '16px' }}>
+              style={{ background: '#7C3AED', color: '#ffffff' }}>
               <span>✨</span>
               <span>The only book written just for your child</span>
             </div>
@@ -180,7 +180,7 @@ export default function HomePage() {
             See a free preview
           </Link>
           {/* Real books, above the fold. Everything below was text and emoji. */}
-          <div className="mt-10 mb-2 grid grid-cols-2 gap-3 sm:gap-5 max-w-md mx-auto">
+          <div className="mt-8 mb-2 grid grid-cols-2 gap-3 sm:gap-5 max-w-md mx-auto">
             <img
               src="/samples/cover-noor.jpg"
               alt="A personalised storybook cover reading Noor's Cosmic Adventure"
@@ -219,7 +219,7 @@ export default function HomePage() {
             How it works
           </h2>
             <div className="text-center mb-14">
-              <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-base"
+              <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm sm:text-base"
                 style={{ background: '#F5F3FF', color: '#6D28D9', border: '2px solid #7C3AED' }}>
                 ⏱️ From first click to front door in under a minute of your time
               </span>
