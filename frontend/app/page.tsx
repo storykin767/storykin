@@ -5,7 +5,7 @@ const STEPS = [
   {
     emoji: '✏️',
     title: 'Tell us about your child',
-    desc: 'Name, age, appearance and their favourite theme. Takes 60 seconds.'
+    desc: 'Name, age, appearance and their favourite theme. Takes about a minute to fill in.'
   },
   {
     emoji: '✨',
@@ -197,7 +197,7 @@ export default function HomePage() {
           <p className="text-xs text-gray-400 mb-8">Two real books, made for two real children.</p>
 
           <p className="text-sm text-gray-400 mt-4">
-            Preview the complete book before you pay. Takes 60 seconds to create.
+            Preview the complete book before you pay. Your book is ready in a few minutes.
           </p>
         </div>
       </section>
@@ -221,7 +221,7 @@ export default function HomePage() {
             <div className="text-center mb-14">
               <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm sm:text-base"
                 style={{ background: '#F5F3FF', color: '#6D28D9', border: '2px solid #7C3AED' }}>
-                ⏱️ From first click to front door in under a minute of your time
+                ⏱️ A few minutes of your time, then it arrives at their door
               </span>
             </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
