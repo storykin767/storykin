@@ -106,7 +106,8 @@ is resold from a bundle and no two books are the same.
 
 QUESTIONS
 Message me before ordering if you are unsure about anything — I would rather
-get the details right than reprint.
+get the details right first time than have you open a book with the wrong
+name in it.
 ```
 
 **Do not remove the "HOW THESE ARE MADE" section.** Etsy requires an explicit
