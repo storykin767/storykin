@@ -149,7 +149,7 @@ export default function CreatePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
+    <main className="min-h-screen bg-gradient-to-b from-purple-50 to-white pt-12 pb-32 sm:pb-12 px-4">
       <div className="max-w-lg mx-auto">
 
         {/* Header */}
@@ -162,7 +162,11 @@ export default function CreatePage() {
             Create your book
           </h1>
           <p className="text-gray-500">
-            Tell us about the child — we'll write their story
+            Tell us about the child — we&apos;ll write their story
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
+            Only their name is needed. Everything else already has a sensible
+            default, so change what you like and skip the rest.
           </p>
         </div>
 
@@ -284,7 +288,7 @@ export default function CreatePage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-medium text-gray-700">
-                Add a sidekick companion?
+                Add a sidekick companion? <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <button
                 onClick={() => update('has_sidekick', !form.has_sidekick)}
@@ -377,6 +381,22 @@ export default function CreatePage() {
             </div>
           </div>
 
+          {/* Always-visible submit on phones: the inline button below sits
+              three screens down, which is a long way to scroll on faith. */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pt-3 pb-5 bg-white/95 backdrop-blur border-t border-purple-100">
+            {error && (
+              <p className="text-xs text-red-600 text-center mb-2" role="alert">{error}</p>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full py-4 text-white font-bold text-lg rounded-xl transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
+            >
+              {ctaText}
+            </button>
+          </div>
+
           {/* Submit */}
           {error && (
             <p className="text-sm text-red-600 text-center mb-3" role="alert">
@@ -386,7 +406,7 @@ export default function CreatePage() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-4 text-white font-bold text-lg rounded-xl transition-all disabled:opacity-50"
+            className="hidden sm:block w-full py-4 text-white font-bold text-lg rounded-xl transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
           >
             {ctaText}
