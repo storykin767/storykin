@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Page {
   page_number: number;
@@ -153,32 +154,53 @@ export default function PreviewPage() {
           </button>
         </div>
 
-        {/* CTA */}
+        {/* CTA — two real options, not one button and a grey link */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Love {childName}&apos;s book?
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Keep {childName}&apos;s book?
           </h2>
-          <p className="text-gray-500 text-sm mb-4">
-            Print it as a beautiful softcover book delivered to your door
+          <p className="text-gray-500 text-sm mb-5">
+            It only exists for {childName} — no one else has this story.
           </p>
+
           <button
             onClick={() => handleCheckout('physical')}
             disabled={checkoutLoading}
-            className="w-full py-4 text-white font-bold text-lg rounded-xl transition-all mb-2 disabled:opacity-50"
+            className="w-full py-4 text-white font-bold text-lg rounded-xl transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)' }}
           >
-            {checkoutLoading ? 'Redirecting...' : 'Print this book — $39.99'}
+            {checkoutLoading ? 'Redirecting...' : 'Printed book — $39.99'}
           </button>
+          <p className="text-xs text-gray-400 mt-2 mb-4">
+            28-page 8&Prime; square softcover, posted to your door
+          </p>
+
           <button
             onClick={() => handleCheckout('digital')}
             disabled={checkoutLoading}
-            className="w-full py-2 text-gray-400 text-sm hover:text-gray-600 transition-all disabled:opacity-50"
+            className="w-full py-3.5 font-semibold rounded-xl border-2 transition-all disabled:opacity-50 hover:bg-purple-50"
+            style={{ borderColor: '#7C3AED', color: '#6B21A8' }}
           >
-            Download digital PDF — $9.99
+            Digital PDF — $9.99
           </button>
+          <p className="text-xs text-gray-400 mt-2">
+            29-page PDF, emailed within minutes
+          </p>
+
           {checkoutError && (
             <p className="text-sm text-red-600 mt-3">{checkoutError}</p>
           )}
+
+          <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col gap-1.5 text-xs text-gray-400">
+            <span>🔒 Secure checkout by Stripe — we never see your card</span>
+            <span>
+              💛{' '}
+              <Link href="/refund-policy" className="underline hover:text-gray-600">
+                14-day reprint or refund
+              </Link>{' '}
+              on printed books
+            </span>
+          </div>
         </div>
 
       </div>
