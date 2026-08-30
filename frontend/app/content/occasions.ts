@@ -48,7 +48,7 @@ export const OCCASION_PAGES: Occasion[] = [
     description: 'Personalised Christmas books for kids: a storybook written and illustrated for one child, with their name and appearance throughout. Read the whole book before you pay. Order printed copies by early December.',
     gradient: 'linear-gradient(135deg, #FEF2F2, #FEE2E2)',
     intro: [
-      'Christmas morning produces a great deal of wrapping paper and a surprisingly small number of things anybody remembers by February.',
+      'Most Christmas gifts for kids are bought in a hurry and forgotten by February. Christmas morning produces a great deal of wrapping paper and a surprisingly small number of things anybody remembers.',
       'A book with the child in it is one of the few presents that gets better after the day, because it goes into the bedtime rotation and stays there.',
     ],
     why: [
@@ -69,7 +69,7 @@ export const OCCASION_PAGES: Occasion[] = [
     ],
     sections: [
       {
-        h: 'Why a book survives Christmas and most presents do not',
+        h: 'Why a book outlasts most Christmas gifts for kids',
         p: [
           'Christmas morning produces a great deal of wrapping paper and a surprisingly small number of things anyone remembers by February. The toys that seemed essential in the shop get played with twice and then live in a box.',
           'A book with the child in it goes into the bedtime rotation instead, which means it gets read forty times rather than once. That is the whole difference: it is not competing for attention on the day, it is competing for a place on the shelf afterwards.',
@@ -100,6 +100,7 @@ export const OCCASION_PAGES: Occasion[] = [
     faqs: [
       { q: 'What is the last date to order personalised Christmas books?', a: 'For printed books shipping within the US, aim for the first week of December. For international shipping, late November. Printing and dispatch take 2-4 business days and December post is unpredictable everywhere. The digital edition can be ordered as late as Christmas Eve and arrives by email in minutes.' },
       { q: 'Can I order books for several children at once?', a: 'Yes, and you should make each one separately. Each book is written from scratch, so two siblings get two genuinely different stories rather than the same book with different names in it.' },
+      { q: 'Are personalised books a good Christmas present for kids who have everything?', a: 'That is most of what they are for. A personalised storybook cannot be a duplicate — there is one copy in existence and it has that child in it — so it works precisely when the obvious presents have all been bought already.' },
       { q: 'Can it be sent straight to the child?', a: 'Yes. You give the delivery address at checkout, so it can go directly to their house.' },
     ],
   },
