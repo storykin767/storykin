@@ -104,6 +104,19 @@ export default async function ThemePage({ params }: { params: Promise<{ theme: s
         </div>
       </section>
 
+      <section className="px-6 py-10">
+        <div className="max-w-2xl mx-auto rounded-2xl border border-purple-100 p-6 text-center" style={{ background: '#FAF8FF' }}>
+          <p className="text-gray-700 leading-relaxed">
+            🎄 Buying ahead for Christmas? Printed books need ordering by early
+            December — see the{' '}
+            <Link href="/gifts/christmas" className="font-semibold underline" style={{ color: '#7C3AED' }}>
+              Christmas ordering deadlines
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
+
       <section className="px-6 py-16 text-center" style={{ background: '#F5F3FF' }}>
         <div className="max-w-xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Make one and read it first</h2>

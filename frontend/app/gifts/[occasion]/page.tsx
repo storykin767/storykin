@@ -77,8 +77,41 @@ export default async function OccasionPage({ params }: { params: Promise<{ occas
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">When to order</h2>
           <p className="text-gray-700 leading-relaxed">{o.timing}</p>
+
+          {o.deadlines && (
+            <div className="mt-7 space-y-3">
+              {o.deadlines.map((d) => (
+                <div key={d.label} className="bg-white rounded-xl p-5 border border-purple-100">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                    <span className="font-semibold text-gray-900">{d.label}</span>
+                    <span className="font-bold" style={{ color: '#7C3AED' }}>order by {d.by}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed">{d.note}</p>
+                </div>
+              ))}
+              <p className="text-xs text-gray-400 pt-1">
+                These are recommendations rather than guarantees — postal times in December
+                are outside anyone&apos;s control, so earlier is always safer.
+              </p>
+            </div>
+          )}
         </div>
       </section>
+
+      {o.sections && (
+        <section className="px-6 py-14">
+          <div className="max-w-2xl mx-auto space-y-10">
+            {o.sections.map((sec) => (
+              <div key={sec.h}>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">{sec.h}</h2>
+                {sec.p.map((para, i) => (
+                  <p key={i} className="text-gray-600 leading-relaxed mb-3">{para}</p>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="px-6 py-14">
         <div className="max-w-2xl mx-auto">

@@ -7,6 +7,10 @@ export type Occasion = {
   tips: string[];
   faqs: { q: string; a: string }[];
   gradient: string;
+  /** Optional extra prose, used where a page needs real depth (Christmas). */
+  sections?: { h: string; p: string[] }[];
+  /** Optional ordering deadlines table. */
+  deadlines?: { label: string; by: string; note: string }[];
 };
 
 export const OCCASION_PAGES: Occasion[] = [
@@ -39,9 +43,9 @@ export const OCCASION_PAGES: Occasion[] = [
   },
   {
     slug: 'christmas', emoji: '🎄', label: 'Christmas',
-    h1: 'A personalised Christmas gift for a child, made only for them',
-    title: 'Personalised Christmas Gift For Kids — A Storybook Of Their Own | Storykin',
-    description: 'A Christmas present that is not another toy: a keepsake storybook written and illustrated for one child. Order early — see the whole book before you pay.',
+    h1: 'Personalised children\u2019s Christmas books, written for one child',
+    title: 'Personalised Children\u2019s Christmas Books — A Storybook Made For Your Child | Storykin',
+    description: 'Personalised Christmas books for kids: a storybook written and illustrated for one child, with their name and appearance throughout. Read the whole book before you pay. Order printed copies by early December.',
     gradient: 'linear-gradient(135deg, #FEF2F2, #FEE2E2)',
     intro: [
       'Christmas morning produces a great deal of wrapping paper and a surprisingly small number of things anybody remembers by February.',
@@ -58,8 +62,43 @@ export const OCCASION_PAGES: Occasion[] = [
       'A story about family or belonging reads particularly well at Christmas — it is one of the lesson options on the form.',
       'If you are shipping to a different household, order early enough that it does not arrive on the 27th.',
     ],
+    deadlines: [
+      { label: 'Printed book, shipping outside the US', by: 'Sunday 29 November', note: 'International post in December is the least predictable part of the whole year. Earlier is better.' },
+      { label: 'Printed book, shipping within the US', by: 'Sunday 6 December', note: 'Printing and dispatch take 2-4 business days, then normal post on top.' },
+      { label: 'Digital PDF, anywhere', by: 'Christmas Eve', note: 'Arrives by email within minutes. Print it at home or read it on a tablet on the day.' },
+    ],
+    sections: [
+      {
+        h: 'Why a book survives Christmas and most presents do not',
+        p: [
+          'Christmas morning produces a great deal of wrapping paper and a surprisingly small number of things anyone remembers by February. The toys that seemed essential in the shop get played with twice and then live in a box.',
+          'A book with the child in it goes into the bedtime rotation instead, which means it gets read forty times rather than once. That is the whole difference: it is not competing for attention on the day, it is competing for a place on the shelf afterwards.',
+        ],
+      },
+      {
+        h: 'Buying for several children',
+        p: [
+          'Make each book separately rather than reusing one. Every Storykin story is written from scratch, so two siblings get two genuinely different stories — different adventures, different illustrations — rather than the same book with the names swapped.',
+          'This matters more than it sounds on Christmas morning. Children compare presents immediately, and two children opening obviously identical books notice at once. Two children opening two different stories, each about themselves, do not.',
+        ],
+      },
+      {
+        h: 'What age this suits',
+        p: [
+          'Two to eight is the range. Younger children are read to and recognise themselves in the pictures long before they can read the words. Around five or six they start reading their own name aloud, which is the age most parents say the book lands hardest.',
+          'For a child at the older end, choose a theme with a bit more plot — superhero or magical kingdom — and pick a lesson that suits the year they have had.',
+        ],
+      },
+      {
+        h: 'Buying from a distance',
+        p: [
+          'Printed books are posted to whatever address you give at checkout, so a grandparent in another country can send one directly to their grandchild without it passing through their own hands.',
+          'If you want to give it in person, order it to yourself with enough time to wrap it — see the deadlines above.',
+        ],
+      },
+    ],
     faqs: [
-      { q: 'What is the last date to order for Christmas?', a: 'For printed books, aim for the first week of December. Printing and dispatch take 2-4 business days and December delivery times are unpredictable everywhere. The digital edition can be ordered on Christmas Eve.' },
+      { q: 'What is the last date to order personalised Christmas books?', a: 'For printed books shipping within the US, aim for the first week of December. For international shipping, late November. Printing and dispatch take 2-4 business days and December post is unpredictable everywhere. The digital edition can be ordered as late as Christmas Eve and arrives by email in minutes.' },
       { q: 'Can I order books for several children at once?', a: 'Yes, and you should make each one separately. Each book is written from scratch, so two siblings get two genuinely different stories rather than the same book with different names in it.' },
       { q: 'Can it be sent straight to the child?', a: 'Yes. You give the delivery address at checkout, so it can go directly to their house.' },
     ],
