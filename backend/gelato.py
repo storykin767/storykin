@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import date
 
 import httpx
 from dotenv import load_dotenv
@@ -27,7 +28,31 @@ from pdf_builder import INTERIOR_PAGES
 PAGE_COUNT = int(os.getenv("GELATO_PAGE_COUNT", str(INTERIOR_PAGES)))
 
 RETURN_EMAIL = os.getenv("SUPPORT_EMAIL", "hello@storykinbooks.com")
-SHIPMENT_METHOD = os.getenv("GELATO_SHIPMENT_METHOD", "normal")
+
+# Gelato accepts either a specific carrier uid or a type. "normal" picks the
+# cheapest option, which in the US is USPS Ground Advantage: $6.99 but 10-14
+# business days, so an order placed in December misses Christmas entirely.
+# "express" picks the cheapest express option — USPS Priority Mail Standard,
+# $10.76 and 7-8 days — which buys back roughly two weeks of deadline for
+# $3.77 on a book carrying about $21 of margin.
+#
+# Rather than rely on remembering to switch this in November and switch it
+# back in January, upgrade automatically through the gift season.
+HOLIDAY_EXPRESS_FROM = os.getenv("HOLIDAY_EXPRESS_FROM", "11-01")   # MM-DD
+HOLIDAY_EXPRESS_UNTIL = os.getenv("HOLIDAY_EXPRESS_UNTIL", "12-22")  # MM-DD
+SHIPMENT_METHOD_OVERRIDE = os.getenv("GELATO_SHIPMENT_METHOD")       # forces a value
+
+
+def shipment_method(today=None) -> str:
+    """Express through the Christmas run-up, cheapest the rest of the year."""
+    if SHIPMENT_METHOD_OVERRIDE:
+        return SHIPMENT_METHOD_OVERRIDE
+    today = today or date.today()
+    stamp = f"{today.month:02d}-{today.day:02d}"
+    # the window does not cross a year boundary, so a simple compare is enough
+    if HOLIDAY_EXPRESS_FROM <= stamp <= HOLIDAY_EXPRESS_UNTIL:
+        return "express"
+    return "normal"
 
 
 def build_order_payload(
@@ -70,7 +95,7 @@ def build_order_payload(
                 "quantity": 1,
             }
         ],
-        "shipmentMethodUid": SHIPMENT_METHOD,
+        "shipmentMethodUid": shipment_method(),
         "shippingAddress": {
             "firstName": name_parts[0] if name_parts else "Customer",
             "lastName": " ".join(name_parts[1:]) if len(name_parts) > 1 else ".",
