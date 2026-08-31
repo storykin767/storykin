@@ -56,15 +56,16 @@ export const OCCASION_PAGES: Occasion[] = [
       { h: 'It reads well aloud on the day', p: 'A story you can read to a child while the room is still full of paper is worth more than a toy that needs setting up.' },
       { h: 'It becomes the thing they keep', p: 'Personalised books tend to survive every subsequent clear-out, which is not true of much else opened that morning.' },
     ],
-    timing: 'Order printed books by the first week of December. Christmas is the busiest period of the year for every print network, and last-minute international shipping is the one thing nobody can promise. The digital edition has no such deadline — it arrives by email within minutes.',
+    timing: 'Deadlines vary a lot by country, and the United States is the slowest — standard US post runs 10-14 business days on top of printing, so a US order placed in December will not arrive in time. Christmas is also the busiest period of the year for every print network. The digital edition has no such deadline: it arrives by email within minutes.',
     tips: [
       'Buying for several grandchildren? Make each book separately rather than reusing one. Two children with two books get two different stories, which is the entire point.',
       'A story about family or belonging reads particularly well at Christmas — it is one of the lesson options on the form.',
       'If you are shipping to a different household, order early enough that it does not arrive on the 27th.',
     ],
     deadlines: [
-      { label: 'Printed book, shipping outside the US', by: 'Sunday 29 November', note: 'International post in December is the least predictable part of the whole year. Earlier is better.' },
-      { label: 'Printed book, shipping within the US', by: 'Sunday 6 December', note: 'Printing and dispatch take 2-4 business days, then normal post on top.' },
+      { label: 'Printed book, United States', by: 'Friday 20 November', note: 'Standard US post runs 10-14 business days on top of 2-4 days printing, so a US order needs roughly a month. This is the earliest deadline of the four and the one people underestimate.' },
+      { label: 'Printed book, Australia and Canada', by: 'Friday 27 November', note: 'Six to nine business days in transit, plus printing.' },
+      { label: 'Printed book, UK and Europe', by: 'Friday 4 December', note: 'European delivery is considerably quicker than the US — usually 2-4 business days once printed.' },
       { label: 'Digital PDF, anywhere', by: 'Christmas Eve', note: 'Arrives by email within minutes. Print it at home or read it on a tablet on the day.' },
     ],
     sections: [
@@ -98,7 +99,7 @@ export const OCCASION_PAGES: Occasion[] = [
       },
     ],
     faqs: [
-      { q: 'What is the last date to order personalised Christmas books?', a: 'For printed books shipping within the US, aim for the first week of December. For international shipping, late November. Printing and dispatch take 2-4 business days and December post is unpredictable everywhere. The digital edition can be ordered as late as Christmas Eve and arrives by email in minutes.' },
+      { q: 'What is the last date to order personalised Christmas books?', a: 'For the United States, order by 20 November — standard US post takes 10-14 business days on top of 2-4 days printing, so a US order needs about a month. UK and Europe are much quicker, so early December is fine there. Australia and Canada sit in between. The digital edition can be ordered as late as Christmas Eve and arrives by email in minutes.' },
       { q: 'Can I order books for several children at once?', a: 'Yes, and you should make each one separately. Each book is written from scratch, so two siblings get two genuinely different stories rather than the same book with different names in it.' },
       { q: 'Are personalised books a good Christmas present for kids who have everything?', a: 'That is most of what they are for. A personalised storybook cannot be a duplicate — there is one copy in existence and it has that child in it — so it works precisely when the obvious presents have all been bought already.' },
       { q: 'Can it be sent straight to the child?', a: 'Yes. You give the delivery address at checkout, so it can go directly to their house.' },
