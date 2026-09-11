@@ -6,7 +6,7 @@ import ssl
 import certifi
 from dotenv import load_dotenv
 from supabase import Client, create_client
-from tenacity import RetryError
+from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
 
 from image_generator import generate_all_images
 from story_generator import generate_story
@@ -23,6 +23,19 @@ supabase: Client = create_client(
 )
 
 TOTAL_PAGES = 12
+
+
+@retry(stop=stop_after_attempt(4), wait=wait_exponential(multiplier=1, min=2, max=20),
+       reraise=True)
+def _write(operation):
+    """Run a Supabase write with retries.
+
+    The final writes are single points of failure: by the time we reach them
+    the book has been fully paid for in OpenAI credit, so a dropped connection
+    there throws away everything. Same failure mode that lost a book on
+    6 September 2026.
+    """
+    return operation()
 STORY_PROGRESS = 30      # progress once the story is written
 IMAGE_PROGRESS = 65      # progress budget shared across the illustrations
 
@@ -127,16 +140,16 @@ async def run_pipeline(job_id: str, child_data: dict) -> dict:
                 "dalle_prompt": page_data.dalle_prompt,
                 "image_url": result["image_url"],
             })
-        supabase.table("story_pages").insert(rows).execute()
+        _write(lambda: supabase.table("story_pages").insert(rows).execute())
 
         # ── Step 5: Mark complete ──────────────────────────────
         image_urls = {str(r["page_number"]): r["image_url"] for r in image_results}
-        supabase.table("jobs").update({
+        _write(lambda: supabase.table("jobs").update({
             "status": "complete",
             "progress": 100,
             "current_page": total,
             "image_urls": image_urls,
-        }).eq("id", job_id).execute()
+        }).eq("id", job_id).execute())
 
         log.info("[%s] Pipeline complete!", job_id)
         return {

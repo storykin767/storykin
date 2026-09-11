@@ -92,8 +92,17 @@ async def generate_single_image(prompt: str, page_number: int) -> bytes:
     return image_bytes
 
 
+@retry(stop=stop_after_attempt(4), wait=wait_exponential(multiplier=1, min=2, max=20),
+       reraise=True)
 def _upload(file_path: str, image_bytes: bytes) -> str:
-    """Upload to Supabase Storage and return the permanent public URL."""
+    """Upload to Supabase Storage and return the permanent public URL.
+
+    Retried because this runs twelve times a book over a long-lived HTTP
+    connection, and a stale keep-alive socket surfaces as
+    "RemoteProtocolError: Server disconnected" — which lost a real customer's
+    book on 6 September 2026. The OpenAI call above was already retried; this
+    one was not.
+    """
     supabase.storage.from_("storykin-images").upload(
         path=file_path,
         file=image_bytes,
