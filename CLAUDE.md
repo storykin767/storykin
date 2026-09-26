@@ -1189,17 +1189,22 @@ Mitigation: style-anchor prompt + explicit character description every time.
 Largely resolved in practice by gpt-image-1 — see section 13.
 Future, if it regresses: img2img reference image or fine-tuned model.
 
-### Stripe live mode — approved, but never once exercised
-Live mode is approved and active. Confirmed on 24 September 2026 in the
-dashboard (account FBF GROUP LLC): live Payments is empty and the balance
-view reads "No balance transactions". Not one payment has ever been taken.
+### Stripe live mode — RESOLVED, the live webhook is confirmed working
+Live mode is approved, active, and as of 26 September 2026 it has been
+exercised for real. The Railway STRIPE_WEBHOOK_SECRET matches the live
+endpoint: a genuine cs_live_ payment was accepted, the signature verified,
+and the order row was written. See section 19c for the full run.
 
-The consequence is easy to miss: THE LIVE WEBHOOK HAS NEVER FIRED. If the
-Railway STRIPE_WEBHOOK_SECRET does not match the LIVE endpoint's signing
-secret, nothing has surfaced that yet, and nothing will until the first real
-customer — whose payment would then 400, leaving them charged and unfulfilled.
-Your first sale is also your first test of that path, which is the strongest
-argument for buying one $9.99 digital copy yourself before marketing harder.
+This was the single largest risk in the project and it is now closed with
+evidence rather than assumption. What it used to say here: the live webhook
+had never fired once, so a mismatched secret would have returned 400 and left
+the first real customer charged and unfulfilled, with nothing to reveal the
+problem beforehand.
+
+Still true, and still worth guarding: if the webhook endpoint is ever
+recreated, or the account is switched, the signing secret changes and must be
+updated on Railway. The symptom is a 400 on every delivery and orders that
+are paid in Stripe but absent from the orders table.
 
 Note also that the current Stripe sandbox is empty. The four cs_test_ orders
 in the orders table came from an older sandbox and cannot be traced in the
@@ -1463,8 +1468,10 @@ Sprint 9 (23 August - 10 September 2026) -- Selling it
      GET /health returns ok
      GET /test-db returns 404 (proves ENVIRONMENT=production)
 6. Place one real end-to-end order of each tier:
-     digital  -- confirm the download email arrives and the PDF opens
-     physical -- confirm the order reaches the Gelato dashboard
+     digital  -- DONE 26 September 2026. Email arrived, PDF opened, 29 pages
+                 at 206mm. Details in section 19c.
+     physical -- STILL OUTSTANDING. Confirm the order reaches the Gelato
+                 dashboard and that gelato_order_id lands on the order row.
 7. Watch Railway logs during both. Every step logs with the order id.
 
 ---
@@ -1485,6 +1492,18 @@ oversight when picking this up later.
   eye colour both honoured. THIS IS A TEST ROW in the production jobs table.
 - Digital fulfilment: PDF built, uploaded, Resend email received in an inbox.
   The whole chain in fulfillment.py has been exercised for real.
+- THE DIGITAL TIER IS PROVEN WITH REAL MONEY (26 September 2026). A live
+  $9.99 self-purchase, order 268e7988-af3e-4096-bc90-f552f83bb2fd against
+  job 2c4f81c8-b48a-479b-9220-ec3b494be3e6:
+    cs_live_ session accepted, webhook signature verified, order row written
+    paid -> delivered in 42 seconds
+    PDF built and uploaded (storykin_book_1790385548.pdf, 5.49MB)
+    jobs.image_urls["pdf"] recorded correctly
+    Resend email arrived, download link worked, file opened
+    29 pages, 583.937pt square = 206mm exactly (200mm trim + 3mm bleed)
+  The founder reviewed the delivered PDF and is happy with it, including the
+  bleed margin a digital buyer sees. That question is settled — do not
+  re-open it without a new reason.
 - The failure mode that actually bites is the network, not the AI: a dropped
   Supabase upload lost a finished book on 6 September 2026. Uploads and the
   final writes are retried since.
@@ -1492,18 +1511,20 @@ oversight when picking this up later.
   by a Gelato draft order. Contract receipt $16.68 ($9.69 + $6.99 US shipping).
 
 ### Parked deliberately, not forgotten
-- ONE LIVE DIGITAL ORDER ($9.99). Now the highest-value open item, and
-  overdue. Confirmed 24 September 2026 that live Stripe has taken zero
-  payments ever, so the live webhook has never fired even once — see
-  "Stripe live mode" in section 18. The handler logic has no test coverage
-  either: an earlier version of this file claimed it was covered by tests
-  signing real HMAC payloads, and no such tests exist. Reviewed by eye only.
-  One self-purchase converts the single biggest unknown into a known.
-  Someone already got as far as the card form on 28 August and did not
-  finish, so this path is not hypothetical.
-- ONE PHYSICAL PROOF ($39.99). No book has ever been physically printed.
-  This is also the only way to answer the print-quality question below.
-  A physical order proves the Stripe path too, so it answers both at once.
+- DONE, 26 September 2026: the live digital order. See above. Note the
+  handler still has no automated test coverage — it is proven by one real
+  transaction, not by tests.
+- ONE PHYSICAL PROOF ($39.99) — now the only major unknown left, and the
+  highest-value open item. No book has ever been physically printed and
+  gelato_order_id has never been populated on any order. It is also the only
+  way to answer the print-quality question below.
+  The risk is narrower than it was: the Stripe and webhook half of this path
+  was proven by the digital order, so a physical order now tests Gelato
+  alone — whether it accepts the real cover and interior files, and whether
+  what arrives is good enough to sell for $39.99.
+  Worth doing before November: Christmas is the 6x season, the Christmas
+  page and the automatic shipping upgrade are already built, and you cannot
+  market a physical keepsake you have never held.
 
 ### Known open question: print resolution
 Illustrations are 1024x1024, which is about 130 DPI on an 8 inch page, against
@@ -1548,8 +1569,9 @@ variable moves.
   DONE: storykinbooks.com verified in Resend (23 August 2026)
   DONE: Refund policy page (/refund-policy)
   DONE: 10 SEO pages for themes and occasions
-  Place one real order of each tier to confirm the fulfilment chain
-    -- still the single most valuable outstanding item; see section 19c
+  DONE: one real digital order, chain confirmed (26 September 2026)
+  Place one real PHYSICAL order to confirm the print chain
+    -- now the single most valuable outstanding item; see section 19c
   Collect first UGC (offer 50% refund for unboxing video)
 
 ### Month 2
@@ -1663,8 +1685,10 @@ GitHub: https://github.com/storykin767/storykin
 
 ### Current Status (as of September 2026)
 - Live at storykinbooks.com
-- 0 real paid orders yet
-- Stripe live mode approved and active
+- 0 orders from actual customers. One live $9.99 digital order exists, placed
+  by the founder on 26 September 2026 to validate the payment and fulfilment
+  chain — real money, but not demand. Do not count it as traction.
+- Stripe live mode approved, active, and proven end to end (section 19c)
 - No digital marketing spend yet
 - 10 purpose-built SEO pages shipped (6 themes, 4 occasions). Search Console
   shows them ranking for real buying queries but too low to yield clicks —
