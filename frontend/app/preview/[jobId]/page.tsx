@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Page {
   page_number: number;
@@ -91,12 +92,16 @@ export default function PreviewPage() {
         <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 mb-6">
 
           {/* Illustration */}
-          <div className="relative">
-            <img
+          <div className="relative w-full" style={{ height: '320px' }}>
+            <Image
               src={page.image_url}
               alt={`Page ${page.page_number}`}
-              className="w-full object-cover"
-              style={{ height: '320px' }}
+              fill
+              // The card is capped at max-w-lg (512px), full width below that
+              sizes="(max-width: 640px) 100vw, 512px"
+              // The first page is what the buyer judges the book on
+              priority={currentPage === 0}
+              className="object-cover"
             />
             {/* Watermark */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

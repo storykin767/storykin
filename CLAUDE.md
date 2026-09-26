@@ -22,25 +22,44 @@ Meaning: a story for your own family. A story that belongs to you and only you.
 ## 2. Business Model
 
 - Retail price: $39.99 physical / $9.99 digital PDF
-- AI generation cost: ~$0.87 per book (GPT-4o $0.15 + 12 x DALL-E 3 $0.06)
+- AI generation cost: ~$0.65 per book
+  (GPT-4o $0.15 + 12 x gpt-image-1 at medium, ~$0.042 each)
 - Print + ship cost: $16.68 (Gelato 8x8" softcover $9.69 + shipping $6.99, US)
 - Stripe fee: ~$1.46 (2.9% + $0.30)
 - Supabase storage: ~$0.09 per book
-- Net profit per book: ~$20.89 (52% gross margin)
+- Net profit per book: ~$21.11 (53% gross margin)
 
-These are confirmed against a real Gelato draft order receipt (August 2026),
-not estimates. The earlier $13.50 print figure was for an A5 product that
-does not exist in Gelato's catalog.
-- Digital PDF profit: ~$9.14 (91% margin)
+The print figure is confirmed against a real Gelato draft order receipt
+(August 2026), not an estimate. The earlier $13.50 print figure was for an A5
+product that does not exist in Gelato's catalog.
+
+The generation figure follows the image model in the code and moves when that
+does. It was $0.87 when the pipeline used dall-e-3, which OpenAI has retired.
+
+- Digital PDF profit: ~$8.66 (87% margin)
+  ($9.99 less ~$0.59 Stripe, ~$0.65 generation, ~$0.09 storage)
 - Break-even: 6 book sales covers all setup costs (~$130 total capex)
-- Monthly fixed costs: $25/mo (Railway $5 + Vercel Pro $20)
+- Monthly fixed costs: ~$6/mo today, ~$31/mo from 23 October 2026
+    Railway    ~$5
+    Vercel     $0 — the account is on Hobby, NOT Pro. This file claimed
+               "Vercel Pro $20" for months and it was never true. Verified
+               in the dashboard on 24 September 2026.
+    Supabase   free until 23 October 2026, then $25/mo (see section 18)
+    Domain     ~$14/yr ≈ $1.20/mo
+    Sentry, Resend, GitHub: free tier
+  From 23 October, Supabase is ~80% of the entire fixed cost base.
 
 ### Revenue milestones
-- 10 orders/mo = $242 profit
-- 50 orders/mo = $1,210 profit
-- 100 orders/mo = $2,419 profit
-- 500 orders/mo = $12,095 profit
-- December (Christmas, 6x): 600 orders = ~$14,514 profit in one month
+Physical orders, before fixed costs.
+- 10 orders/mo = $211 profit
+- 50 orders/mo = $1,056 profit
+- 100 orders/mo = $2,111 profit
+- 500 orders/mo = $10,555 profit
+- December (Christmas, 6x): 600 orders = ~$12,666 profit in one month
+
+Note these are lower than the figures this file carried before Sprint 8. They
+were never recalculated after the print cost was corrected from $13.50 to
+$16.68, so they were running on a $24.19 margin that no longer existed.
 
 ### Seasonal multipliers
 - Christmas (December): 6x baseline
@@ -125,10 +144,19 @@ does not exist in Gelato's catalog.
 - Supabase dashboard: https://supabase.com (project: jweriwhordrjpffmmrcp)
 - Stripe dashboard: https://dashboard.stripe.com/test
 - Railway dashboard: https://railway.app (project: surprising-playfulness)
-- Vercel dashboard: https://vercel.com (project: storykin, account: storykin767)
+- Vercel dashboard: https://vercel.com/storykin767s-projects/storykin
+    The URL scope is "storykin767s-projects", NOT "storykin767" — the latter
+    404s even while logged in. Analytics: .../storykin/analytics
+    Plan: Hobby (free).
 - Sentry dashboard: https://sentry.io (project: javascript-nextjs, org: storykin)
 - Resend dashboard: https://resend.com
 - GitHub: https://github.com/storykin767/storykin
+
+### Companion documents in this repo
+- docs/services.md  -- every third-party service, what breaks without it,
+                       what it costs, and where the real risk sits
+- marketing/        -- the channel playbooks, written to be executed:
+                       etsy.md, facebook.md, pinterest.md, outreach.md
 
 ---
 
@@ -148,9 +176,9 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
   all payment and auth SDKs are TypeScript-first.
 - Clean separation: two services, each language doing what it is best at.
 
-### Frontend -- Next.js 14 on Vercel
+### Frontend -- Next.js 16 on Vercel
 - Location: /frontend
-- React + Tailwind CSS
+- React 19 + Tailwind CSS v4
 - App Router (not Pages Router)
 - Deployed automatically on every push to main branch
 - Free tier handles early traffic, scales automatically
@@ -159,7 +187,9 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 ### Backend -- Python FastAPI on Railway
 - Location: /backend
 - Deployed via Dockerfile (python:3.11-slim base)
-- railway.toml forces Dockerfile builder (not Nixpacks)
+- No railway.toml: Railway detects the Dockerfile on its own. The file was
+  removed in the 23 August 2026 revert and deliberately never restored —
+  see "Never change the port the Dockerfile binds" in section 18.
 - Auto-deploys on every push to main branch
 - ~$5/mo on Railway starter plan
 
@@ -181,8 +211,10 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 ### Why asyncio.gather + Semaphore(3) not threading
 - Python GIL makes threading unreliable for CPU tasks
 - asyncio is native Python async -- no GIL issues for I/O
-- Semaphore(3) keeps us within OpenAI rate limits (3 parallel DALL-E calls max)
-- Generates all 12 illustrations in ~45-70 seconds instead of ~120 seconds sequential
+- Semaphore(3) caps parallel image calls at 3
+- It is no longer the binding constraint: the organisation's 5 images/minute
+  cap is, so image_generator.py also paces calls through MinuteRateLimiter.
+  The semaphore alone attempts ~11/min and fails the book partway with a 429.
 
 ### Why Pillow not sharp (Node.js)
 - Pillow has native CMYK color mode -- essential for print
@@ -204,7 +236,7 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 - PlanetScale removed free tier
 
 ### Why Railway not Render/Fly.io/Heroku
-- Dockerfile deploy in minutes -- no config files beyond railway.toml
+- Dockerfile deploy in minutes -- no config files at all, it just finds it
 - Managed Redis available (for future Celery)
 - ~$5/mo starter -- cheapest viable option
 - Render has slower cold starts
@@ -214,7 +246,8 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 ### Why Gelato not Printful/Lulu/Blurb
 - Global print network (32 countries) -- faster international delivery
 - API-first -- designed for programmatic orders
-- Competitive pricing for books (~$13.50 A5 softcover)
+- Competitive pricing for books ($9.69 for the 8x8" softcover we actually sell;
+  the A5 product this originally assumed does not exist in their catalog)
 - Printful is more expensive for books
 - Lulu API is slower and poorly documented
 - Blurb has no proper API
@@ -237,12 +270,15 @@ Option C: Next.js frontend + Python FastAPI backend (chosen)
 - Both Python and TypeScript can read it natively
 - Supabase Table Editor shows it beautifully
 
-### Why we download DALL-E images immediately
-- DALL-E returns temporary signed Azure Blob URLs
-- URLs expire after 2 hours
-- If we store the URL and download later, it fails
-- Solution: download bytes immediately after generation, upload to Supabase Storage
-- Supabase Storage URLs are permanent and never expire
+### Why we hold image bytes, never image URLs
+- dall-e-3 returned temporary signed Azure Blob URLs that expired after 2 hours,
+  so storing the URL and downloading later failed
+- gpt-image-1 sidesteps this entirely: it returns the image inline as base64,
+  so there is no expiring link to race against
+- Either way the rule is the same — get the bytes, upload them to Supabase
+  Storage, and store only that permanent URL
+- image_generator.py still handles both shapes, in case a future model
+  returns a URL again
 
 ---
 
@@ -253,7 +289,9 @@ storykin/
 ├── .gitignore                      -- Excludes .env, venv, node_modules, __pycache__
 ├── frontend/
 │   ├── app/
+│   │   ├── layout.tsx              -- Metadata, OpenGraph, Pinterest claim, Analytics
 │   │   ├── page.tsx                -- Landing page (purple theme, #7C3AED)
+│   │   ├── globals.css             -- Tailwind v4 entry point
 │   │   ├── create/
 │   │   │   └── page.tsx            -- Intake form (name, pronouns, skin, sidekick, moral, theme)
 │   │   ├── loading/
@@ -266,11 +304,31 @@ storykin/
 │   │   │       └── page.tsx        -- Post-payment success page (Stripe success_url)
 │   │   ├── error-page/
 │   │   │   └── page.tsx            -- Generation/payment error page
+│   │   ├── global-error.tsx        -- Root error boundary, reports to Sentry
+│   │   ├── about/
+│   │   │   └── page.tsx            -- About page (written for AI search indexing)
+│   │   ├── refund-policy/
+│   │   │   └── page.tsx            -- 14-day reprint-or-refund promise
+│   │   ├── books/
+│   │   │   └── [theme]/
+│   │   │       └── page.tsx        -- 6 static SEO pages, one per theme
+│   │   ├── gifts/
+│   │   │   └── [occasion]/
+│   │   │       └── page.tsx        -- 4 static SEO pages, one per occasion
+│   │   ├── content/
+│   │   │   ├── themes.ts           -- Copy + FAQs for the 6 /books pages
+│   │   │   └── occasions.ts        -- Copy + FAQs for the 4 /gifts pages
+│   │   │                              (Christmas also has sections + deadlines)
+│   │   ├── sitemap.ts              -- Generates sitemap.xml from the two above
+│   │   ├── robots.ts               -- Generates robots.txt; hides /preview, /order
 │   │   └── components/
 │   │       └── Logo.tsx            -- SVG book + star logo (purple)
-│   ├── sentry.client.config.ts     -- Sentry frontend config (auto-generated)
-│   ├── sentry.server.config.ts     -- Sentry server config (auto-generated)
+│   ├── instrumentation-client.ts   -- Sentry browser config (Next 16 convention)
+│   ├── instrumentation.ts          -- Sentry server/edge registration hook
+│   ├── sentry.server.config.ts     -- Sentry server config
+│   ├── sentry.edge.config.ts       -- Sentry edge config
 │   ├── next.config.ts              -- Next.js config (Sentry plugin added)
+│   ├── public/                     -- og-image, favicons, samples/ book shots
 │   ├── .env.local                  -- Local env vars (never commit)
 │   └── package.json
 ├── backend/
@@ -279,16 +337,29 @@ storykin/
 │   ├── pipeline.py                 -- Full generation orchestration (story+images+DB)
 │   ├── fulfillment.py              -- Post-payment: build PDF -> Gelato print / email PDF
 │   ├── story_generator.py          -- GPT-4o story generation, Pydantic models
-│   ├── image_generator.py          -- DALL-E 3 async loop, Supabase upload
-│   ├── pdf_builder.py              -- ReportLab PDF, Pillow CMYK, Supabase upload
+│   ├── image_generator.py          -- gpt-image-1 async loop, rate limiter, upload
+│   ├── pdf_builder.py              -- ReportLab cover/interior/digital PDFs, upload
 │   ├── checkout.py                 -- Stripe session creation, Resend emails
 │   ├── gelato.py                   -- Gelato print order submission
 │   ├── migrations/                 -- Optional SQL to run in the Supabase SQL editor
 │   ├── Dockerfile                  -- python:3.11-slim, non-root user, uvicorn
 │   ├── .dockerignore               -- Keeps venv/.env out of the image
-│   ├── railway.toml                -- Forces Dockerfile builder, sets start command
 │   ├── requirements.txt            -- All Python dependencies (pinned)
 │   └── .env                       -- Local env vars (never commit)
+├── docs/
+│   └── services.md                 -- Every third-party service: what it does,
+│                                      what breaks without it, what it costs
+└── marketing/
+    ├── etsy.md + etsy/             -- Digital-first Etsy listing pack + images
+    ├── facebook.md                 -- Group posts, mapped to specific groups
+    ├── pinterest.md                -- Boards, pin copy, posting cadence
+    ├── outreach.md                 -- Blogger and gift-guide outreach (time-sensitive:
+    │                                  Christmas guides are commissioned Sep-Oct)
+    ├── pins/                       -- Pin images
+    └── logo-icon-1024.png
+
+There is no test suite. Nothing in this repo is covered by automated tests —
+see section 18.
 
 ---
 
@@ -393,8 +464,16 @@ currency: text (usd)
 customer_email: text
 shipping_address: JSONB (from Stripe shipping_details)
 gelato_order_id: text (not yet used -- future)
-status: text (pending/paid/shipped/delivered)
+status: text (pending/paid/shipped/delivered/printing/fulfillment_failed)
 created_at, updated_at: timestamptz
+
+NOTE: the four rows dated 21 March 2026 are Stripe TEST orders (every
+stripe_session_id starts cs_test_), left over from Sprint 5 checkout testing.
+They are physical, $39.99, status "paid" and gelato_order_id null, so they
+read exactly like real revenue at a glance. They are not. The account has
+never taken a live payment — see "Stripe live mode" in section 18.
+They are old enough that the startup recovery sweep cannot touch them: it only
+looks back RECOVER_WINDOW_HOURS (24h) for orders stuck at "paid".
 
 ### story_pages table
 id: UUID primary key
@@ -456,7 +535,7 @@ DALL-E style anchor (appended to every image prompt):
 tenacity retry: 3 attempts, exponential backoff 2-10 seconds
 Cost: ~$0.15 per book
 
-### Step 2: Illustration generation (DALL-E 3)
+### Step 2: Illustration generation (gpt-image-1)
 
 Model: gpt-image-1 (override with IMAGE_MODEL)
 Size: 1024x1024
@@ -639,17 +718,23 @@ System message: "You are a children's book author. You always return valid JSON 
 
 ## 13. Character Consistency Strategy
 
-Problem: DALL-E 3 generates each image independently with no memory of previous images.
-A child with curly red hair on page 1 may look different on page 7.
+Problem: every image is generated independently, with no memory of the ones
+before it. A child with curly red hair on page 1 may look different on page 7.
 
 Current mitigation (style-anchor approach):
-- Every DALL-E prompt ends with the same style anchor phrase
+- Every image prompt ends with the same style anchor phrase
 - Every prompt explicitly describes the child: "{age} year old child with {hair_color}
   hair, {eye_color} eyes and {skin_tone} skin tone"
 - Warm watercolour style creates artistic consistency even if character varies slightly
 - We market this as "dreamy storybook art" not "realistic portrait"
+- IMAGE_QUALITY stays at medium: at low, the model drops the stated eye colour
+  often enough to matter on a product sold as personalised
 
-Future improvements:
+In practice this stopped being the problem it was under dall-e-3. Books
+generated through the live site with gpt-image-1 hold the character across all
+12 pages well enough that no buyer has been given a reason to comment.
+
+Future improvements, if it regresses:
 - img2img: generate character reference image first, use as seed for all subsequent images
 - Fine-tuned model: train on consistent character style
 - Ideogram or other models with better consistency
@@ -710,16 +795,49 @@ Status messages:
   failed -> redirect to /error-page
 Progress bar uses CSS transition duration 1000ms for smooth animation
 Animated dots (...) on message text cycle every 500ms
+Timeouts (generation normally takes 2-3 minutes at the current image rate):
+  after 3 minutes  -- swaps in a "taking a little longer than usual" line
+  after 7 minutes  -- gives up and redirects to /error-page
+  5 consecutive failed polls -- gives up and redirects to /error-page
 
 ### Preview page (/preview/[jobId]) -- app/preview/[jobId]/page.tsx
 Fetches book from $NEXT_PUBLIC_API_URL/book/{jobId}
 State: pages[], currentPage index, childName, title, checkoutLoading
 Navigation: Previous/Next buttons + dot indicators (active dot wider)
 Watermark: absolute positioned, opacity 0.15, rotated -30deg
+Illustrations render through next/image (fill + sizes), NOT a plain <img>.
+  The stored files are 1024x1024 PNGs at ~1.7MB each — twelve of those is
+  ~20MB to read one preview, on an audience that is 69% mobile. Next serves a
+  resized WebP/AVIF instead. The PNG in Supabase Storage is untouched, so
+  pdf_builder still fetches the full-quality original for print; this is
+  deliberate, because the print-resolution question in section 19c is still
+  open and must not be pre-empted by re-encoding the masters.
+  Requires images.remotePatterns in next.config.ts, which derives the host
+  from NEXT_PUBLIC_SUPABASE_URL so it survives a project-ref change.
+  Watch the Vercel image-optimisation quota if volume grows — on Hobby it is
+  finite, though at current volume (~60 images/month) it is not close.
 Checkout flow:
   POST to $NEXT_PUBLIC_API_URL/checkout with {job_id, tier}
   Receives checkout_url
   window.location.href = checkout_url (full redirect to Stripe)
+
+### SEO pages -- /books/[theme] and /gifts/[occasion]
+10 statically generated pages, built from app/content/themes.ts (6 themes) and
+app/content/occasions.ts (4 occasions). Both routes use generateStaticParams
+plus generateMetadata, emit FAQPage structured data, and are listed in
+sitemap.ts automatically — adding an entry to the content file is all it takes
+to ship a new page.
+
+The Christmas occasion carries extra fields the others do not: `sections` for
+long-form prose and `deadlines` for the ordering cutoff table. Those deadlines
+are built from real Gelato transit times and must be kept in step with the
+shipping upgrade window in gelato.py.
+
+### Static pages
+/about          -- Founder story, written to be quotable by AI search
+/refund-policy  -- 14-day reprint-or-refund on printed books; digital is
+                   non-refundable once the download email has been sent,
+                   except on delivery failure
 
 ---
 
@@ -748,10 +866,23 @@ RATE_LIMIT_PER_DAY=20           (books per IP per day)
 RATE_LIMIT_ENABLED=true         (set false only for local load testing)
 FROM_EMAIL=Storykin <hello@storykinbooks.com>
 SUPPORT_EMAIL=hello@storykinbooks.com
-GELATO_PRODUCT_UID=softcover_book_perfect_binding_a5_portrait
 STORY_MODEL=gpt-4o
+IMAGE_MODEL=gpt-image-1          (do NOT set this to dall-e-3 — it was retired)
+IMAGE_QUALITY=medium             (low renders the wrong eye colour too often)
+IMAGE_SIZE=1024x1024
 MAX_CONCURRENT_IMAGES=3
+IMAGES_PER_MINUTE=5              (raise only after OpenAI raises the account tier)
+GELATO_PAGE_COUNT=28             (defaults to pdf_builder.INTERIOR_PAGES)
+GELATO_SHIPMENT_METHOD=...       (forces normal/express; unset = seasonal logic)
+HOLIDAY_EXPRESS_FROM=11-01       (MM-DD; free shipping upgrade starts)
+HOLIDAY_EXPRESS_UNTIL=12-22      (MM-DD; free shipping upgrade ends)
 LOG_LEVEL=INFO
+
+Do NOT set GELATO_PRODUCT_UID unless you have verified the new value against
+the live Gelato catalog. The default in gelato.py and pdf_builder.py is the
+real 8x8" softcover UID. The value this file used to recommend
+(softcover_book_perfect_binding_a5_portrait) does not exist and would make
+every physical order fail with NOT_FOUND — that was the Sprint 8 bug.
 
 The backend refuses to start if SUPABASE_URL, SUPABASE_SECRET_KEY,
 OPENAI_API_KEY, STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET is missing —
@@ -789,44 +920,130 @@ Railway uses: Stripe dashboard webhook endpoint -> use that whsec
 
 ## 16. Local Development
 
+Paths below are relative to the repo root. This project has been worked on
+from more than one machine, so neither the venv nor backend/.env is in git —
+both have to exist locally before the backend will start, and config.py will
+name whichever credential is missing.
+
 ### Start backend
-cd /Users/A3014443/projects/storykin/backend
-source venv/bin/activate
+cd backend
+source venv/bin/activate            # macOS/Linux
+venv\Scripts\activate               # Windows (PowerShell or cmd)
 uvicorn main:app --reload --port 8000
 
 ### Start frontend
-cd /Users/A3014443/projects/storykin/frontend
+cd frontend
 npm run dev
 
 ### Start Stripe webhook listener (separate terminal)
 stripe listen --forward-to localhost:8000/webhook
 (copy the whsec_... and put in backend/.env as STRIPE_WEBHOOK_SECRET)
 
-### GitHub SSH (run after every Mac restart -- SSH agent clears on reboot)
+### Test the full pipeline locally (no frontend needed)
+cd backend
+python pipeline.py
+Creates a real job for "Ava" and runs it end to end. This spends real OpenAI
+credit (~$0.50) and writes a real row to the live jobs table.
+
+### Build a PDF from an existing job
+cd backend
+python pdf_builder.py <job_id>            # cover + interior print files
+python pdf_builder.py <job_id> digital    # the 29-page digital edition
+Each prints the public Supabase URL it uploaded to.
+
+### Check which Python/venv is active
+which python   (macOS/Linux)  /  where python  (Windows)
+-- should point inside storykin/backend/venv
+
+### GitHub SSH (macOS -- the agent clears on reboot)
 ssh-add ~/.ssh/id_storykin
 ssh -T git@github-storykin  -- should say: Hi storykin767!
 
 ### Fix git remote if push fails
+macOS reaches GitHub through an SSH host alias, so the remote is rewritten to it:
 git remote set-url origin git@github-storykin:storykin767/storykin.git
 git push origin main
 
-### Test the full pipeline locally (no frontend needed)
-cd backend
-source venv/bin/activate
-python pipeline.py
-
-### Build a PDF from existing job
-cd backend
-source venv/bin/activate
-python pdf_builder.py <job_id>
-
-### Check which Python/venv is active
-which python  -- should show .../storykin/backend/venv/bin/python
+Do NOT run that anywhere else. github-storykin is defined in the Mac's
+~/.ssh/config and nowhere else, so on any other machine it swaps a working
+remote for an unresolvable host. Everywhere else the remote is the plain one:
+git remote set-url origin git@github.com:storykin767/storykin.git
 
 ### SSL certificate fix (if getting CERTIFICATE_VERIFY_FAILED)
+Only affects pyenv Python on macOS; see section 18.
 export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
 export REQUESTS_CA_BUNDLE=$(python3 -c "import certifi; print(certifi.where())")
 Then restart uvicorn in same terminal session.
+pipeline.py already sets this itself at import time.
+
+---
+
+## 16b. Windows machine notes (verified 21 September 2026)
+
+Section 16 covers both platforms. This is the Windows-only detail that does
+not belong there.
+
+Repo root on this machine:
+C:\Users\test1\Desktop\Projects\storykin\storykin
+
+### Toolchain present
+Git 2.55.0.3, Python 3.14.7 + pip 26.2.1, Node 24.19.0 LTS + npm 11.17.0,
+GitHub CLI 2.101.0, VS Code 1.138.0.
+VS Code extensions: Python, Pylance, Ruff, ESLint, Prettier, Tailwind.
+package.json pins no engines constraint, so Node 24 LTS suits Next 16 / React 19.
+
+### Installed 21 September 2026
+- backend\venv           created on 3.14; all 69 pinned packages installed
+                         from prebuilt wheels, nothing built from source
+- frontend\node_modules  npm install, 521 packages, package-lock.json unchanged
+
+### Still missing -- the app will not run until these exist
+- backend\.env, frontend\.env.local
+                         gitignored, so they are not in the clone. The backend
+                         refuses to start without them and names the missing
+                         variable (section 15). Copy them from the Mac, or
+                         re-read each value from its own dashboard.
+- Stripe CLI (optional)  winget install Stripe.StripeCli
+- Docker (optional)      only to verify Dockerfile/port changes -- see
+                         "Never change the port the Dockerfile binds"
+
+### Python version
+Production is python:3.11-slim; this machine runs 3.14.7. Every pin in
+requirements.txt had a cp314 wheel, so the 3.11 fallback was not needed. If a
+future pin lacks a 3.14 build, install 3.11 alongside
+(winget install Python.Python.3.11) and rebuild the venv with
+py -3.11 -m venv venv. Local and production sit on different minor versions
+either way -- production remains the authority.
+
+### npm 11 gates install scripts
+npm 11 does not run install scripts by default. Three are pending here:
+@sentry/cli, sharp, unrs-resolver. sharp does not need its script -- the
+win32-x64 binary arrives prebuilt as an optional dependency. @sentry/cli never
+downloaded sentry-cli.exe, which is only used to upload source maps during
+next build; npm run dev does not touch it. Enable with npm approve-scripts <pkg>.
+
+### If venv\Scripts\activate is blocked by execution policy
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+(or run venv\Scripts\activate.bat from cmd, which needs no policy change)
+
+### GitHub SSH here -- nothing to run
+The key has no passphrase, so there is no ssh-add step.
+  key:    C:\Users\test1\.ssh\id_ed25519
+  remote: git@github.com:storykin767/storykin.git   (plain, no host alias)
+  verify: ssh -T git@github.com  -- should say: Hi storykin767!
+Commit identity: storykin767 <storykin767@users.noreply.github.com>
+
+### PATH does not reach open terminals
+Windows does not push environment changes into running processes, and a
+terminal opened inside an app inherits that app's stale copy -- so a new tab
+in the same app is still stale. After any install, open a fresh terminal or
+refresh the current one:
+$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ';' + [Environment]::GetEnvironmentVariable("Path","User")
+
+### PowerShell 5.1 drops empty-string arguments
+It silently discards "" before the argument reaches a native program, so
+ssh-keygen -N "" yields a key with a literal two-quote passphrase instead of
+no passphrase. Put --% ahead of the arguments when an empty one matters.
 
 ---
 
@@ -911,6 +1128,34 @@ Order statuses: paid -> printing / delivered, or fulfillment_failed.
 
 ## 18. Known Issues & Technical Debt
 
+### Supabase free tier pauses the project, and that takes production down
+NEXT PAUSE: 23 OCTOBER 2026. Paying $25/mo for Pro is what stops it.
+
+This already happened. The project was paused around 11 September 2026 and was
+still down on 23 September. What it looks like from outside is the dangerous
+part — nothing announces itself:
+  - storykinbooks.com serves normally (Vercel is static, unaffected)
+  - GET /health returns 200 (it returns a hardcoded dict, touches no database)
+  - GET /status/{id} returns 404, because main.py catches every exception and
+    returns 404 — a dead database is indistinguishable from a bad job id
+  - POST /generate 500s, the frontend redirects to /error-page, and NO job row
+    is written — so the failure leaves no trace in the jobs table at all
+
+During the outage every visitor who tried to create a book got an error page,
+and the jobs table recorded nothing, which made the database look merely quiet.
+Vercel Analytics was the only place the damage was visible.
+
+Diagnosis, in order:
+  1. nslookup <project-ref>.supabase.co — a paused/deleted project stops
+     resolving entirely (NXDOMAIN). Check against 8.8.8.8 too, to rule out
+     local DNS.
+  2. If it resolves, curl $SUPABASE_URL/rest/v1/ with the service key.
+  3. Log into supabase.com and check whether the project is paused.
+
+If the project is ever recreated rather than resumed it gets a NEW ref, which
+must be updated in Railway, Vercel, backend/.env, frontend/.env.local and the
+two places this file records it (sections 5 and 15).
+
 ### SSL certificate issue on local Mac (pyenv Python 3.9)
 pyenv Python 3.9 does not use Mac system certificates.
 Symptoms: httpx.ConnectError: CERTIFICATE_VERIFY_FAILED
@@ -936,21 +1181,36 @@ been physically printed yet. Order one proof before promoting the physical
 tier hard.
 
 ### Character consistency across illustrations
-DALL-E 3 has no memory between generations.
+No image model here has memory between generations.
 Mitigation: style-anchor prompt + explicit character description every time.
-Future: img2img reference image or fine-tuned model.
+Largely resolved in practice by gpt-image-1 — see section 13.
+Future, if it regresses: img2img reference image or fine-tuned model.
 
-### Stripe live mode
-Live mode is approved and active (see Marketing History). Make sure the
-Railway STRIPE_WEBHOOK_SECRET matches the LIVE webhook endpoint's signing
-secret — a test-mode secret makes every live webhook fail signature
-verification, which now returns 400 and means paid orders never get fulfilled.
+### Stripe live mode — approved, but never once exercised
+Live mode is approved and active. Confirmed on 24 September 2026 in the
+dashboard (account FBF GROUP LLC): live Payments is empty and the balance
+view reads "No balance transactions". Not one payment has ever been taken.
 
-### Resend domain verification
+The consequence is easy to miss: THE LIVE WEBHOOK HAS NEVER FIRED. If the
+Railway STRIPE_WEBHOOK_SECRET does not match the LIVE endpoint's signing
+secret, nothing has surfaced that yet, and nothing will until the first real
+customer — whose payment would then 400, leaving them charged and unfulfilled.
+Your first sale is also your first test of that path, which is the strongest
+argument for buying one $9.99 digital copy yourself before marketing harder.
+
+Note also that the current Stripe sandbox is empty. The four cs_test_ orders
+in the orders table came from an older sandbox and cannot be traced in the
+dashboard any more.
+
+### Resend domain verification — done
 Emails send from hello@storykinbooks.com (override with the FROM_EMAIL env var).
-If storykinbooks.com is not verified in Resend, delivery only works to
-storykin767@gmail.com — which would silently break digital fulfilment for
-real buyers. Verify the domain in Resend before selling the digital tier.
+storykinbooks.com was verified in Resend on 23 August 2026, after sitting in a
+failed state for five months.
+
+Keep it that way. An unverified domain does not bounce loudly — delivery
+silently narrows to storykin767@gmail.com, so digital buyers pay and simply
+never hear anything. The DKIM and SPF records live in Namecheap DNS; if those
+records are ever edited, re-check Resend.
 
 ### Never change the port the Dockerfile binds
 The Dockerfile must keep `--port 8000` hardcoded. Railway's HTTP proxy routes
@@ -962,10 +1222,12 @@ own healthcheck passed, and the deployment showed green — but every public
 request returned 502 "Application failed to respond", because the proxy was
 still knocking on 8000. It cost a production outage and a full revert.
 
-Related: do NOT add a `startCommand` to railway.toml. Railway runs it without
-a shell, so `$PORT` is passed to uvicorn as a literal string and the container
-dies with "Invalid value for '--port'". The Dockerfile CMD is the single
-source of truth for how the app starts.
+Related: there is no railway.toml, and adding one back is not an improvement.
+The version that existed carried a `startCommand`, which Railway runs without
+a shell — `$PORT` reached uvicorn as a literal string and the container died
+with "Invalid value for '--port'". Both files were removed in the revert and
+Railway has found the Dockerfile by itself ever since. The Dockerfile CMD is
+the single source of truth for how the app starts.
 
 Rule: any change to the Dockerfile or Railway config must be run as a real
 container first (`docker build` then `docker run -p 8000:8000`) and checked
@@ -1001,6 +1263,21 @@ they exist only in the Railway log buffer, which is not searchable after the
 fact. Create a separate Python project in Sentry rather than reusing the
 javascript-nextjs DSN. send_default_pii is off: customer emails and shipping
 addresses must not leave our own systems.
+
+### There is no test suite
+Nothing in this repo has automated tests, and none has ever been committed on
+any branch. Every claim about correctness in this file rests on code review
+and on manual runs against live services.
+
+That matters most for the two paths that cannot be exercised without spending
+money: the live Stripe webhook signature, and Gelato accepting a real print
+order. It also means there is no safety net under a refactor of the pipeline
+or the PDF geometry — the page-count assertion in build_interior_pdf and the
+`INTERIOR_PAGES` import in gelato.py are doing that job instead, at runtime.
+
+If tests get written, the webhook handler is the place to start: it is pure
+enough to drive with a signed HMAC payload and a fake Supabase client, and it
+is the one endpoint where a silent failure costs a paid order.
 
 ### Rate limiting is per-instance and in-memory
 /generate allows 5 books per IP per hour. The counters live in process memory,
@@ -1095,11 +1372,13 @@ Sprint 7 (August 2026) -- Production hardening
       illustrations instead of always saying "1 of 10".
     Story validated for exactly 10 non-empty pages before it is saved.
     PDF text shrinks to fit -- long pages used to run off the bottom.
-    Loading screen gives up after 4 minutes instead of polling forever.
+    Loading screen gives up instead of polling forever (4 minutes at the
+      time; now 7, since generation got slower — see section 14).
     Preview and create pages handle backend errors instead of hanging.
     Removed the dead POST /generate-story endpoint (raised TypeError).
   DEPLOY
-    railway.toml, .dockerignore, non-root Docker user, PYTHONUNBUFFERED.
+    railway.toml (since removed), .dockerignore, non-root Docker user,
+      PYTHONUNBUFFERED.
     All Python dependencies pinned.
     Whole UI unified on the purple brand (create/loading/preview were amber).
 
@@ -1123,7 +1402,43 @@ Sprint 8 (August 2026) -- The physical book actually exists
     both file types accepted, $16.68 contract receipt. Draft then deleted.
   Unit economics corrected from measured data, not estimates:
     print+ship is $16.68, not $13.50, so net margin is $20.89 (52%),
-    not $24.19 (61%).
+    not $24.19 (61%). (Corrected again since: with gpt-image-1 costing less
+    than dall-e-3 did, the real figure is ~$21.11 — see section 2.)
+
+Sprint 9 (23 August - 10 September 2026) -- Selling it
+  THE SITE HAD TO BE HONEST FIRST
+    Two claims the product could not keep were removed, and a real refund
+      policy page written to replace the hand-waving.
+    "60 seconds" replaced everywhere with two to three minutes, which is what
+      generation actually takes at 5 images/minute.
+  FOUND, NOT JUST LIVE
+    10 SEO pages built from two content files: /books/[theme] (6) and
+      /gifts/[occasion] (4), with FAQ structured data and automatic sitemap
+      entries. Adding a page is now a content edit, not a code change.
+    /about page written to be quotable by AI search.
+    Open Graph share image added — links had been previewing as blank.
+    Pinterest domain claimed via meta tag in layout.tsx.
+  THE CHRISTMAS RUN-UP
+    /gifts/christmas built out properly ahead of the season, with ordering
+      deadlines taken from real Gelato transit times rather than guesses.
+    Shipping upgrades itself to express between 1 November and 22 December,
+      absorbed into margin, because standard post misses Christmas. It
+      reverts on its own in January — no diary entry to forget.
+  MOBILE
+    The create form could not be completed on a phone. Fixed.
+    Preview page overflowed on phones; hero pushed the books below the fold.
+    Homepage now shows the actual product instead of describing it.
+  RELIABILITY
+    Supabase uploads and the two final writes are retried. A stale keep-alive
+      socket surfacing as "Server disconnected" lost a real customer's book
+      on 6 September 2026, after all the OpenAI credit had been spent.
+  MARKETING, WRITTEN DOWN TO BE EXECUTED
+    marketing/ added: Etsy listing pack (digital-first), Facebook posts mapped
+      to named groups, Pinterest playbook with pin assets, and blogger and
+      gift-guide outreach.
+    docs/services.md: every third-party service, what breaks without it,
+      what it costs.
+    New logo mark applied sitewide, with a real favicon.
 
 ---
 
@@ -1137,8 +1452,10 @@ Sprint 8 (August 2026) -- The physical book actually exists
 2. Confirm STRIPE_WEBHOOK_SECRET is the LIVE endpoint's secret, not the test
    or CLI one. A mismatch now returns 400 and no order is ever fulfilled.
 3. Run backend/migrations/001_order_idempotency.sql in the Supabase SQL editor
-   (adds the unique index that makes duplicate orders impossible).
-4. Verify storykinbooks.com in Resend, or digital buyers get no email.
+   (adds the unique index that makes duplicate orders impossible). Already
+   applied — it survived the August revert, which left it in place deliberately.
+4. Confirm storykinbooks.com still shows verified in Resend. Verified on
+   23 August 2026; re-check if the Namecheap DNS records were touched since.
 5. Deploy backend and frontend, then check:
      GET /health returns ok
      GET /test-db returns 404 (proves ENVIRONMENT=production)
@@ -1149,7 +1466,7 @@ Sprint 8 (August 2026) -- The physical book actually exists
 
 ---
 
-## 19c. Current State (as of 23 August 2026)
+## 19c. Current State (as of 24 September 2026)
 
 Written down because it is easy to mistake a deliberate decision for an
 oversight when picking this up later.
@@ -1157,15 +1474,30 @@ oversight when picking this up later.
 ### Proven end to end, with real data, in production
 - Book generation: 12 pages, 12 illustrations, ~160 seconds through the live
   site. Character stays consistent across pages with gpt-image-1.
+  Re-verified 24 September 2026 after the Supabase outage, job
+  47805078-8c1d-4d59-a8da-152c969e5e92: POST /generate 200, complete in
+  2m27s, 12/12 illustrations, live progress 10->30->...->100 with
+  current_page reaching 12, /book/{id} returning 12 pages each with a
+  working image URL, and the preview page rendering on mobile. Hair and
+  eye colour both honoured. THIS IS A TEST ROW in the production jobs table.
 - Digital fulfilment: PDF built, uploaded, Resend email received in an inbox.
   The whole chain in fulfillment.py has been exercised for real.
+- The failure mode that actually bites is the network, not the AI: a dropped
+  Supabase upload lost a finished book on 6 September 2026. Uploads and the
+  final writes are retried since.
 - Print files: a real cover and interior from a generated book were accepted
   by a Gelato draft order. Contract receipt $16.68 ($9.69 + $6.99 US shipping).
 
 ### Parked deliberately, not forgotten
-- ONE LIVE DIGITAL ORDER ($9.99). The only untested part is live Stripe
-  checkout and the live webhook signature — the handler logic itself is
-  covered by tests that sign real HMAC payloads.
+- ONE LIVE DIGITAL ORDER ($9.99). Now the highest-value open item, and
+  overdue. Confirmed 24 September 2026 that live Stripe has taken zero
+  payments ever, so the live webhook has never fired even once — see
+  "Stripe live mode" in section 18. The handler logic has no test coverage
+  either: an earlier version of this file claimed it was covered by tests
+  signing real HMAC payloads, and no such tests exist. Reviewed by eye only.
+  One self-purchase converts the single biggest unknown into a known.
+  Someone already got as far as the card form on 28 August and did not
+  finish, so this path is not hypothetical.
 - ONE PHYSICAL PROOF ($39.99). No book has ever been physically printed.
   This is also the only way to answer the print-quality question below.
   A physical order proves the Stripe path too, so it answers both at once.
@@ -1178,11 +1510,15 @@ or accepting it. Watercolour is forgiving of low resolution in a way line art
 is not. DECIDE THIS WHEN THE PHYSICAL PROOF ARRIVES, not from theory.
 
 ### Throughput ceiling — raise before any marketing
+OVERDUE. The plan was to raise the usage tier on 1 SEPTEMBER 2026 and that
+date has passed. Check the current tier at
+https://platform.openai.com/account/rate-limits before doing anything that
+drives traffic — the outreach and Etsy work in marketing/ is exactly that.
+
 The OpenAI organisation is capped at 5 images/minute, so roughly 25 books/hour
-and ~2.7 minutes per book. Planned action: raise the usage tier on
-1 SEPTEMBER 2026. Tiers advance on cumulative paid spend, not on a support
-request — pre-buying credit under Billing counts toward the threshold. At
-~$0.50 a book, $50 of credit is 100 books and also advances a tier.
+and ~2.7 minutes per book. Tiers advance on cumulative paid spend, not on a
+support request — pre-buying credit under Billing counts toward the threshold.
+At ~$0.50 a book, $50 of credit is 100 books and also advances a tier.
 
 AFTER raising the tier, increase IMAGES_PER_MINUTE in the Railway variables to
 match. It is already an env var, so this is config, not a deploy. Raising the
@@ -1206,9 +1542,11 @@ variable moves.
   DONE: Stripe switched to live mode
   DONE: $9.99 digital PDF delivered by email after payment (Sprint 7)
   DONE: storykinbooks.com custom domain connected
-  Verify storykinbooks.com domain in Resend (still outstanding — blocks
-    digital delivery to anyone other than storykin767@gmail.com)
+  DONE: storykinbooks.com verified in Resend (23 August 2026)
+  DONE: Refund policy page (/refund-policy)
+  DONE: 10 SEO pages for themes and occasions
   Place one real order of each tier to confirm the fulfilment chain
+    -- still the single most valuable outstanding item; see section 19c
   Collect first UGC (offer 50% refund for unboxing video)
 
 ### Month 2
@@ -1216,7 +1554,6 @@ variable moves.
   Order history page for returning customers
   Reviews + testimonials section on landing page
   Shareable preview links (viral loop)
-  Refund policy page
   Age-to-reading-level toggle ("Bedtime" vs "Adventure" mode)
   Accessories toggle (glasses, freckles) on create form
 
@@ -1321,12 +1658,62 @@ GitHub: https://github.com/storykin767/storykin
 
 ## 23. Marketing History
 
-### Current Status (as of April 2026)
+### Current Status (as of September 2026)
 - Live at storykinbooks.com
 - 0 real paid orders yet
-- 14+ books generated by real users since launch
 - Stripe live mode approved and active
 - No digital marketing spend yet
+- 10 purpose-built SEO pages shipped (6 themes, 4 occasions). Search Console
+  shows them ranking for real buying queries but too low to yield clicks —
+  846 impressions on /gifts/christmas at around position 36. The bottleneck
+  is backlinks, not content.
+- Pinterest domain claimed 23 August 2026 (meta tag in layout.tsx)
+
+### Measured traffic — Vercel Analytics, 30 days to 24 September 2026
+45 visitors, 123 page views, 62% bounce. Up 13% on visitors and 89% on page
+views against the previous 30 days: demand is growing slowly, not dying.
+
+The funnel, by visitors:
+  /                      36
+  /create                16      <- two thirds of arrivals open the form
+  /loading                5      <- only a third of those submit it
+  /preview/{id}           3
+  /error-page             6
+  /gifts/christmas        3      <- the SEO pages have started to register
+  /about                  1
+
+The 16 -> 5 drop is the largest leak in the product, and it is worth more
+attention than the checkout step. The five /loading hits match the five job
+rows in the same window exactly, so the two sources agree.
+
+Referrers: facebook.com 5, lm.facebook.com 5, google.com 2, l.facebook.com 2,
+m.facebook.com 2, chatgpt.com 1, checkout.stripe.com 1. Facebook is carrying
+this almost single-handedly — 14 of 45 visitors. ChatGPT sent someone, which
+is the /about page doing its job.
+
+71% United States. 69% MOBILE (Android 40%, iOS 29%). Design and test for a
+phone first; the Sprint 9 mobile work was well judged.
+
+That checkout.stripe.com referrer is an abandoned checkout, from the book
+generated 28 August (job c820210e). Someone read the whole book, came back to
+the preview three times, reached the card form and stopped. Closest this
+product has come to revenue.
+
+Caveat on this data: Vercel Hobby caps analytics history at 30 days, so there
+is no way to compare against the June peak. The 3/12/24-month ranges need Pro.
+
+### What the jobs table cannot tell you
+Books generated is NOT traffic — it only counts people who got past a working
+form. In the week to 24 September the jobs table showed almost nothing, which
+read like a demand collapse; Analytics showed real visitors arriving and 100%
+of them landing on /error-page because Supabase was paused. Always check both.
+
+The channel playbooks below are the history. The live, current versions —
+written to be executed rather than remembered — are in `marketing/`:
+etsy.md, facebook.md, pinterest.md and outreach.md. Work from those.
+
+Most time-sensitive item on the whole list: Christmas gift guides are
+commissioned in September and October. See marketing/outreach.md.
 
 ### Channels Attempted
 
@@ -1445,13 +1832,22 @@ Facebook posting strategy:
 - Founder story written and ready
 
 ### Next Marketing Actions (priority order)
-1. Post remaining 3 Facebook groups (tomorrow + day after)
-2. Build Reddit karma to 50+ (comment daily on r/aww etc)
-3. Post r/SideProject founder story (low karma requirement)
-4. Post r/Parenting emotional dad story (needs ~50 karma)
-5. AlternativeTo listing (alternative to Wonderbly)
-6. Parenting blogger outreach (send free books for reviews)
-7. Consider paid ads ONLY after first 10 organic orders
+1. Blogger and gift-guide outreach — marketing/outreach.md. First, because
+   Christmas guides are written in September and October, and because links
+   are the one thing that moves the SEO pages off position 36.
+2. Etsy listing, digital only to start — marketing/etsy.md. Borrows an
+   existing buying audience instead of building one, and earns the reviews a
+   physical listing would need anyway.
+3. Pinterest boards and the five pins — marketing/pinterest.md. Slow to start,
+   but pins keep surfacing for years.
+4. Facebook groups — marketing/facebook.md. Check each group's self-promotion
+   rules first; posting into a group that bans it costs the group.
+5. Build Reddit karma to 50+, then the r/SideProject and r/Parenting posts.
+6. AlternativeTo listing (alternative to Wonderbly).
+7. Consider paid ads ONLY after first 10 organic orders.
+
+Blocked on product, not marketing: the physical tier should not be pushed
+hard until one proof copy has been printed and seen. See section 19c.
 
 ### Key Metrics to Track Weekly
 - Supabase jobs table: books generated (filter by date)
