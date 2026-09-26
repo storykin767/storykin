@@ -464,16 +464,19 @@ currency: text (usd)
 customer_email: text
 shipping_address: JSONB (from Stripe shipping_details)
 gelato_order_id: text (not yet used -- future)
-status: text (pending/paid/shipped/delivered/printing/fulfillment_failed)
+status: text (pending/paid/printing/shipped/delivered/fulfillment_failed/test)
 created_at, updated_at: timestamptz
 
 NOTE: the four rows dated 21 March 2026 are Stripe TEST orders (every
 stripe_session_id starts cs_test_), left over from Sprint 5 checkout testing.
-They are physical, $39.99, status "paid" and gelato_order_id null, so they
-read exactly like real revenue at a glance. They are not. The account has
-never taken a live payment — see "Stripe live mode" in section 18.
-They are old enough that the startup recovery sweep cannot touch them: it only
-looks back RECOVER_WINDOW_HOURS (24h) for orders stuck at "paid".
+They were physical, $39.99, status "paid" and gelato_order_id null, so at a
+glance they read exactly like $160 of real revenue. They are not. The account
+has never taken a live payment — see "Stripe live mode" in section 18.
+
+They were re-marked status "test" on 25 September 2026 so nothing mistakes
+them for income again. "test" is not a status any code writes or reads; it
+exists purely to keep them out of the way. As of that date no row in this
+table has status "paid", and the next one that does will be a real customer.
 
 ### story_pages table
 id: UUID primary key
