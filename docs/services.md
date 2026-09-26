@@ -55,6 +55,12 @@ Two jobs in one service.
 
 **Without it:** everything stops. This is the single point of failure.
 **Dashboard:** supabase.com, project `jweriwhordrjpffmmrcp`.
+**This already failed once.** The free tier paused the project around
+11 September 2026 and production was down until 23 September. The site stayed
+up and `/health` kept returning 200 the whole time, so nothing looked wrong —
+meanwhile every visitor who tried to make a book got an error page and no job
+row was written. **Next pause: 23 October 2026.** $25/mo Pro is what prevents
+it. Full diagnosis steps are in CLAUDE.md section 18.
 
 ### OpenAI — the writing and the illustrations
 GPT-4o writes each story. gpt-image-1 paints the 12 illustrations at medium
@@ -107,11 +113,23 @@ verification.
 
 **Fixed, per month**
 
-| Service | Cost |
-|---|---|
-| Railway | ~$5 |
-| Vercel | ~$20 (Pro) |
-| Supabase, Sentry, Resend | free tier, nowhere near the limits |
+| Service | Now | From 23 Oct 2026 |
+|---|---|---|
+| Railway | ~$5 | ~$5 |
+| Vercel | $0 (Hobby) | $0 |
+| Supabase | free | **$25** |
+| Sentry, Resend, GitHub | free tier | free tier |
+| Namecheap domain | ~$14/yr ≈ $1.20/mo | same |
+| **Total** | **~$6/mo** | **~$31/mo** |
+
+Corrected 24 September 2026. This table previously said "Vercel ~$20 (Pro)",
+which was never true — the account is and was on Hobby. Verified in the
+dashboard.
+
+Note Vercel's Hobby plan is restricted to non-commercial use, and this is a
+storefront taking card payments. Worth reading their current terms and making
+that call deliberately rather than discovering it the way the Supabase pause
+was discovered.
 
 **Per book generated: ~$0.50** (OpenAI). Charged whether or not anyone buys,
 which is why `/generate` is rate-limited per IP.

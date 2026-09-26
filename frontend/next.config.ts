@@ -1,8 +1,25 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+// Illustrations are 1024x1024 PNGs, ~1.7MB each, served straight from Supabase
+// Storage. Twelve of those is ~20MB to page through one preview, and roughly
+// 70% of visitors are on a phone. Letting Next optimise them serves a resized
+// WebP/AVIF instead — the stored PNG is untouched, so pdf_builder still gets
+// the full-quality original for print.
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : "jweriwhordrjpffmmrcp.supabase.co";
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: supabaseHost,
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
 };
 
 export default withSentryConfig(nextConfig, {
