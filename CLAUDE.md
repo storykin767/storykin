@@ -464,16 +464,19 @@ currency: text (usd)
 customer_email: text
 shipping_address: JSONB (from Stripe shipping_details)
 gelato_order_id: text (not yet used -- future)
-status: text (pending/paid/shipped/delivered/printing/fulfillment_failed)
+status: text (pending/paid/printing/shipped/delivered/fulfillment_failed/test)
 created_at, updated_at: timestamptz
 
 NOTE: the four rows dated 21 March 2026 are Stripe TEST orders (every
 stripe_session_id starts cs_test_), left over from Sprint 5 checkout testing.
-They are physical, $39.99, status "paid" and gelato_order_id null, so they
-read exactly like real revenue at a glance. They are not. The account has
-never taken a live payment — see "Stripe live mode" in section 18.
-They are old enough that the startup recovery sweep cannot touch them: it only
-looks back RECOVER_WINDOW_HOURS (24h) for orders stuck at "paid".
+They were physical, $39.99, status "paid" and gelato_order_id null, so at a
+glance they read exactly like $160 of real revenue. They are not. The account
+has never taken a live payment — see "Stripe live mode" in section 18.
+
+They were re-marked status "test" on 25 September 2026 so nothing mistakes
+them for income again. "test" is not a status any code writes or reads; it
+exists purely to keep them out of the way. As of that date no row in this
+table has status "paid", and the next one that does will be a real customer.
 
 ### story_pages table
 id: UUID primary key
@@ -1186,17 +1189,22 @@ Mitigation: style-anchor prompt + explicit character description every time.
 Largely resolved in practice by gpt-image-1 — see section 13.
 Future, if it regresses: img2img reference image or fine-tuned model.
 
-### Stripe live mode — approved, but never once exercised
-Live mode is approved and active. Confirmed on 24 September 2026 in the
-dashboard (account FBF GROUP LLC): live Payments is empty and the balance
-view reads "No balance transactions". Not one payment has ever been taken.
+### Stripe live mode — RESOLVED, the live webhook is confirmed working
+Live mode is approved, active, and as of 26 September 2026 it has been
+exercised for real. The Railway STRIPE_WEBHOOK_SECRET matches the live
+endpoint: a genuine cs_live_ payment was accepted, the signature verified,
+and the order row was written. See section 19c for the full run.
 
-The consequence is easy to miss: THE LIVE WEBHOOK HAS NEVER FIRED. If the
-Railway STRIPE_WEBHOOK_SECRET does not match the LIVE endpoint's signing
-secret, nothing has surfaced that yet, and nothing will until the first real
-customer — whose payment would then 400, leaving them charged and unfulfilled.
-Your first sale is also your first test of that path, which is the strongest
-argument for buying one $9.99 digital copy yourself before marketing harder.
+This was the single largest risk in the project and it is now closed with
+evidence rather than assumption. What it used to say here: the live webhook
+had never fired once, so a mismatched secret would have returned 400 and left
+the first real customer charged and unfulfilled, with nothing to reveal the
+problem beforehand.
+
+Still true, and still worth guarding: if the webhook endpoint is ever
+recreated, or the account is switched, the signing secret changes and must be
+updated on Railway. The symptom is a 400 on every delivery and orders that
+are paid in Stripe but absent from the orders table.
 
 Note also that the current Stripe sandbox is empty. The four cs_test_ orders
 in the orders table came from an older sandbox and cannot be traced in the
@@ -1460,8 +1468,10 @@ Sprint 9 (23 August - 10 September 2026) -- Selling it
      GET /health returns ok
      GET /test-db returns 404 (proves ENVIRONMENT=production)
 6. Place one real end-to-end order of each tier:
-     digital  -- confirm the download email arrives and the PDF opens
-     physical -- confirm the order reaches the Gelato dashboard
+     digital  -- DONE 26 September 2026. Email arrived, PDF opened, 29 pages
+                 at 206mm. Details in section 19c.
+     physical -- STILL OUTSTANDING. Confirm the order reaches the Gelato
+                 dashboard and that gelato_order_id lands on the order row.
 7. Watch Railway logs during both. Every step logs with the order id.
 
 ---
@@ -1482,6 +1492,18 @@ oversight when picking this up later.
   eye colour both honoured. THIS IS A TEST ROW in the production jobs table.
 - Digital fulfilment: PDF built, uploaded, Resend email received in an inbox.
   The whole chain in fulfillment.py has been exercised for real.
+- THE DIGITAL TIER IS PROVEN WITH REAL MONEY (26 September 2026). A live
+  $9.99 self-purchase, order 268e7988-af3e-4096-bc90-f552f83bb2fd against
+  job 2c4f81c8-b48a-479b-9220-ec3b494be3e6:
+    cs_live_ session accepted, webhook signature verified, order row written
+    paid -> delivered in 42 seconds
+    PDF built and uploaded (storykin_book_1790385548.pdf, 5.49MB)
+    jobs.image_urls["pdf"] recorded correctly
+    Resend email arrived, download link worked, file opened
+    29 pages, 583.937pt square = 206mm exactly (200mm trim + 3mm bleed)
+  The founder reviewed the delivered PDF and is happy with it, including the
+  bleed margin a digital buyer sees. That question is settled — do not
+  re-open it without a new reason.
 - The failure mode that actually bites is the network, not the AI: a dropped
   Supabase upload lost a finished book on 6 September 2026. Uploads and the
   final writes are retried since.
@@ -1489,18 +1511,20 @@ oversight when picking this up later.
   by a Gelato draft order. Contract receipt $16.68 ($9.69 + $6.99 US shipping).
 
 ### Parked deliberately, not forgotten
-- ONE LIVE DIGITAL ORDER ($9.99). Now the highest-value open item, and
-  overdue. Confirmed 24 September 2026 that live Stripe has taken zero
-  payments ever, so the live webhook has never fired even once — see
-  "Stripe live mode" in section 18. The handler logic has no test coverage
-  either: an earlier version of this file claimed it was covered by tests
-  signing real HMAC payloads, and no such tests exist. Reviewed by eye only.
-  One self-purchase converts the single biggest unknown into a known.
-  Someone already got as far as the card form on 28 August and did not
-  finish, so this path is not hypothetical.
-- ONE PHYSICAL PROOF ($39.99). No book has ever been physically printed.
-  This is also the only way to answer the print-quality question below.
-  A physical order proves the Stripe path too, so it answers both at once.
+- DONE, 26 September 2026: the live digital order. See above. Note the
+  handler still has no automated test coverage — it is proven by one real
+  transaction, not by tests.
+- ONE PHYSICAL PROOF ($39.99) — now the only major unknown left, and the
+  highest-value open item. No book has ever been physically printed and
+  gelato_order_id has never been populated on any order. It is also the only
+  way to answer the print-quality question below.
+  The risk is narrower than it was: the Stripe and webhook half of this path
+  was proven by the digital order, so a physical order now tests Gelato
+  alone — whether it accepts the real cover and interior files, and whether
+  what arrives is good enough to sell for $39.99.
+  Worth doing before November: Christmas is the 6x season, the Christmas
+  page and the automatic shipping upgrade are already built, and you cannot
+  market a physical keepsake you have never held.
 
 ### Known open question: print resolution
 Illustrations are 1024x1024, which is about 130 DPI on an 8 inch page, against
@@ -1535,6 +1559,84 @@ variable moves.
 
 ---
 
+## 19d. Sprint 10 — PLANNED, NOT STARTED (drafted 26 September 2026)
+
+Goal: personalised colouring pages, and the first email list this business has
+ever had. Two deliverables sharing one core.
+
+Validated before planning: gpt-image-1 produces clean colouring-book line art
+from an existing dalle_prompt with the style anchor swapped. Tested by hand,
+output judged good. Still to check: how it looks printed on a home printer,
+where line weight and faint grey actually show up.
+
+### Track A — shared core (build first, both tracks depend on it)
+  to_colouring_prompt(): strip the watercolour style anchor from an existing
+    dalle_prompt, append the colouring anchor. No change to story_generator.py
+    at all — the scene and full character description are already in there,
+    which is what makes the colouring book match the story the child knows.
+      "Black and white line art for a children's colouring book. Clean bold
+       outlines, no shading, no greyscale, no colour, large simple shapes to
+       colour in, plain white background."
+  generate_colouring_images() in image_generator.py, reusing the existing
+    semaphore and MinuteRateLimiter. Stores to {job_id}/colour_{n}.png.
+  Letter-size page painter in pdf_builder.py. NOT the 206mm square used for
+    print: no bleed, 12mm safe margin, square art centred, name beneath.
+    Home printers cannot print edge to edge.
+
+### Track B — free personalised colouring page (the lead magnet)
+  POST /colouring-page: name, hair, eyes, email -> one image -> URL
+  New "leads" table in Supabase + a migration file
+  /free-colouring-page route: form -> ~25s generating screen -> shows the
+    image with a download button, and emails a copy
+  Per-IP rate limiting on the /generate pattern. A free image endpoint is an
+    invitation to burn credit.
+  Why this exists: 45 visitors a month, no email list, no social proof, and a
+  $39.99 ask from a brand nobody has heard of. 31 of last month's 45 visitors
+  left with no way to ever contact them again. Cost per lead ~4 cents.
+
+### Track C — paid colouring book
+  PRICES["colouring"] = 699, added to the CheckoutRequest tier Literal
+  fulfillment.py branch: generate 12 -> build -> email -> delivered
+  Generated AFTER payment, never before — same principle as the PDF today
+  Third button on /preview
+
+### Decisions already made (do not re-litigate)
+  $6.99. US Letter portrait. Four fields on the free form (name, hair, eyes,
+  email) — deliberately not the nine-field wall that loses two thirds of
+  people on /create today. Image shown on screen AND emailed, so the reward is
+  immediate and the address is still captured.
+
+### THE DEPENDENCY THAT BITES
+  Image throughput. The organisation is capped at 5 images/minute and it is
+  shared: a burst of free colouring-page requests competes directly with a
+  paying customer's book, and a colouring book doubles the images per order.
+  The OpenAI tier raise — overdue since 1 September, and dismissed until now
+  as "not binding at current volume" — becomes a PREREQUISITE for this sprint,
+  not a nice-to-have. Raise it first, then set IMAGES_PER_MINUTE on Railway.
+
+### Human steps this sprint cannot do for itself
+  Run the leads table migration in the Supabase SQL editor
+  Approve consent wording — marketing email needs consent at capture and an
+    unsubscribe link, which is different from today's transactional email
+  Print a test colouring page at home and look at it
+
+### Dated items that must not slip while this is being built
+  3 Oct   — outreach follow-up, once, in thread, then stop
+  23 Oct  — Supabase pauses again unless on Pro ($25/mo)
+  15 Nov  — Emily Reviews gift guide deadline
+  ASAP    — order the physical proof. It gates outreach converting, it is the
+            last major unknown, and a reply could arrive before 3 October
+
+### Explicitly NOT in this sprint
+  Printed colouring books. Wrong paper (coated silk with matt lamination is a
+  poor colouring surface) and line art at ~130 DPI is far less forgiving than
+  watercolour. Revisit only after the physical proof answers the resolution
+  question.
+  Bundling the colouring book as a checkout add-on. Better commercially, but
+  needs multi-line-item checkout. v2.
+
+---
+
 ## 20. Roadmap (post-launch)
 
 ### Month 1 (after first 10 orders)
@@ -1545,8 +1647,9 @@ variable moves.
   DONE: storykinbooks.com verified in Resend (23 August 2026)
   DONE: Refund policy page (/refund-policy)
   DONE: 10 SEO pages for themes and occasions
-  Place one real order of each tier to confirm the fulfilment chain
-    -- still the single most valuable outstanding item; see section 19c
+  DONE: one real digital order, chain confirmed (26 September 2026)
+  Place one real PHYSICAL order to confirm the print chain
+    -- now the single most valuable outstanding item; see section 19c
   Collect first UGC (offer 50% refund for unboxing video)
 
 ### Month 2
@@ -1660,8 +1763,10 @@ GitHub: https://github.com/storykin767/storykin
 
 ### Current Status (as of September 2026)
 - Live at storykinbooks.com
-- 0 real paid orders yet
-- Stripe live mode approved and active
+- 0 orders from actual customers. One live $9.99 digital order exists, placed
+  by the founder on 26 September 2026 to validate the payment and fulfilment
+  chain — real money, but not demand. Do not count it as traction.
+- Stripe live mode approved, active, and proven end to end (section 19c)
 - No digital marketing spend yet
 - 10 purpose-built SEO pages shipped (6 themes, 4 occasions). Search Console
   shows them ranking for real buying queries but too low to yield clicks —
@@ -1738,13 +1843,60 @@ commissioned in September and October. See marketing/outreach.md.
 - Posts ready to go for: r/Parenting, r/GiftIdeas, r/Mommit, r/SideProject
 - Key learning: Never post link in body — put in first comment
 
-#### Facebook Groups
-Joined and approved in these groups:
-- Grandparents raising grandchildren ✅ POSTED
-- Gift ideas for newborns baby & kids ✅ POSTED
-- Baby shower gift ideas ⬜ Post tomorrow
-- Moms of toddlers ⬜ Post tomorrow
-- Grandparents love their grandchildren ⬜ Post day after
+#### Facebook Groups — AUDITED 29-30 September 2026, read this before posting
+
+THE DISCOVERY THAT EXPLAINS THE FLAT NUMBERS: posting is not publishing.
+Several of these groups hold new members under review, so content never
+reaches the feed. Baby Shower Gift Ideas states it outright:
+  "Your review is still pending. To help keep this group safe, admins review
+   new participants before their content is published in the group."
+That is a MEMBER-level gate, not a post-level one. Nothing posted there can
+appear until an admin approves the participant — which has not happened since
+joining. Grandma's Love shows the same shape: Published none, Declined none,
+Pending one since May.
+
+So the "✅ POSTED" marks this file used to carry were wrong. Posts were
+submitted. Several were never seen by anyone.
+
+Check any group with: /groups/<id>/my_pending_content, /my_posted_content,
+/my_declined_content. One minute each, and it is the only way to know whether
+the channel is actually running.
+
+State as of 30 September 2026:
+
+| Group | Members | State |
+|---|---|---|
+| Grandma's Love | 876.2K | nothing ever published; 1 pending since May |
+| Grandparents Love Their Grandchildren | 67.9K | PUBLISHED 27 Sep, admin-approved in a minute, link comment added |
+| MOMS OF TODDLERS | 26.5K | posted 29 Sep, pending approval |
+| Gifts Ideas for Newborns Baby & Kids | 1.9K | PUBLISHED 29 Sep, link comment still missing |
+| Baby Shower Gift Ideas!! | 692 | posted 29 Sep, pending; participant review outstanding |
+| Grandparents Raising Grandchildren | 528 | PUBLISHED 29 Sep, link comment still missing |
+
+Grandma's Love is the best target on the list — 876K, US, high engagement,
+exactly the primary persona — and it is unreachable until an admin approves
+the participant. Worth asking an admin directly.
+
+MEASURED RESULT: the one post that had its link comment produced Facebook
+referrals and a /gifts/grandparent visit. The two published without a link
+comment produced nothing. Both end with "link in the comments" and have no
+link, so they are dead ends by construction. The comment is not optional.
+
+#### A fabricated post is sitting in a queue — delete it
+A post dated 4 May 2026 is still pending in Grandma's Love, written in the
+voice of a customer rather than the founder:
+  "I've been looking for something truly special for my granddaughter for
+   months... I found this site called Storykin... I chose the magical kingdom
+   theme for my granddaughter Lily. Added her little cat as her sidekick...
+   she looked up at me with the biggest eyes and said 'Grandma, I'm in a
+   BOOK!' I cried."
+There is no Lily and no cat. The attached images are captioned "Ava and the
+Dinosaur Adventure", so it does not even match its own screenshots, and it
+promises "a beautiful printed book delivered to your door" when no book has
+ever been printed. It violates the first rule in marketing/facebook.md
+(disclose that you made it) and could publish to 876K people at any time.
+Two delete attempts on 29 September did not take — Facebook may block deletion
+while participant review is pending. DELETE IT BY HAND.
 
 Facebook posting strategy:
 - Post text without link → then add link in FIRST COMMENT
@@ -1805,10 +1957,20 @@ Facebook posting strategy:
 
 #### What converts
 - Real screenshot of actual book illustration (stops scroll)
-- Emotional story angle ("she said I'm in a BOOK!")
 - Preview before pay removes biggest objection
 - Never mention AI — always "personalised gift"
 - Physical book angle beats digital subscription
+
+STRUCK 30 September 2026: this list used to include an "emotional story angle"
+evidenced by the quote "she said I'm in a BOOK!". That quote is not customer
+feedback. It was written by the founder in May as part of the fabricated
+Facebook post described above, and it then sat in this file for months being
+read as evidence. Nothing here is based on a real customer reaction, because
+there has not been one yet.
+
+Treat the rest of this list as hypothesis, not finding. The only measured
+conversion data in the whole project is in the funnel numbers in section 23,
+and they come from 45 visitors.
 
 ### Messages Written (ready to use)
 
