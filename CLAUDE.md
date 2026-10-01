@@ -1843,13 +1843,60 @@ commissioned in September and October. See marketing/outreach.md.
 - Posts ready to go for: r/Parenting, r/GiftIdeas, r/Mommit, r/SideProject
 - Key learning: Never post link in body — put in first comment
 
-#### Facebook Groups
-Joined and approved in these groups:
-- Grandparents raising grandchildren ✅ POSTED
-- Gift ideas for newborns baby & kids ✅ POSTED
-- Baby shower gift ideas ⬜ Post tomorrow
-- Moms of toddlers ⬜ Post tomorrow
-- Grandparents love their grandchildren ⬜ Post day after
+#### Facebook Groups — AUDITED 29-30 September 2026, read this before posting
+
+THE DISCOVERY THAT EXPLAINS THE FLAT NUMBERS: posting is not publishing.
+Several of these groups hold new members under review, so content never
+reaches the feed. Baby Shower Gift Ideas states it outright:
+  "Your review is still pending. To help keep this group safe, admins review
+   new participants before their content is published in the group."
+That is a MEMBER-level gate, not a post-level one. Nothing posted there can
+appear until an admin approves the participant — which has not happened since
+joining. Grandma's Love shows the same shape: Published none, Declined none,
+Pending one since May.
+
+So the "✅ POSTED" marks this file used to carry were wrong. Posts were
+submitted. Several were never seen by anyone.
+
+Check any group with: /groups/<id>/my_pending_content, /my_posted_content,
+/my_declined_content. One minute each, and it is the only way to know whether
+the channel is actually running.
+
+State as of 30 September 2026:
+
+| Group | Members | State |
+|---|---|---|
+| Grandma's Love | 876.2K | nothing ever published; 1 pending since May |
+| Grandparents Love Their Grandchildren | 67.9K | PUBLISHED 27 Sep, admin-approved in a minute, link comment added |
+| MOMS OF TODDLERS | 26.5K | posted 29 Sep, pending approval |
+| Gifts Ideas for Newborns Baby & Kids | 1.9K | PUBLISHED 29 Sep, link comment still missing |
+| Baby Shower Gift Ideas!! | 692 | posted 29 Sep, pending; participant review outstanding |
+| Grandparents Raising Grandchildren | 528 | PUBLISHED 29 Sep, link comment still missing |
+
+Grandma's Love is the best target on the list — 876K, US, high engagement,
+exactly the primary persona — and it is unreachable until an admin approves
+the participant. Worth asking an admin directly.
+
+MEASURED RESULT: the one post that had its link comment produced Facebook
+referrals and a /gifts/grandparent visit. The two published without a link
+comment produced nothing. Both end with "link in the comments" and have no
+link, so they are dead ends by construction. The comment is not optional.
+
+#### A fabricated post is sitting in a queue — delete it
+A post dated 4 May 2026 is still pending in Grandma's Love, written in the
+voice of a customer rather than the founder:
+  "I've been looking for something truly special for my granddaughter for
+   months... I found this site called Storykin... I chose the magical kingdom
+   theme for my granddaughter Lily. Added her little cat as her sidekick...
+   she looked up at me with the biggest eyes and said 'Grandma, I'm in a
+   BOOK!' I cried."
+There is no Lily and no cat. The attached images are captioned "Ava and the
+Dinosaur Adventure", so it does not even match its own screenshots, and it
+promises "a beautiful printed book delivered to your door" when no book has
+ever been printed. It violates the first rule in marketing/facebook.md
+(disclose that you made it) and could publish to 876K people at any time.
+Two delete attempts on 29 September did not take — Facebook may block deletion
+while participant review is pending. DELETE IT BY HAND.
 
 Facebook posting strategy:
 - Post text without link → then add link in FIRST COMMENT
@@ -1910,10 +1957,20 @@ Facebook posting strategy:
 
 #### What converts
 - Real screenshot of actual book illustration (stops scroll)
-- Emotional story angle ("she said I'm in a BOOK!")
 - Preview before pay removes biggest objection
 - Never mention AI — always "personalised gift"
 - Physical book angle beats digital subscription
+
+STRUCK 30 September 2026: this list used to include an "emotional story angle"
+evidenced by the quote "she said I'm in a BOOK!". That quote is not customer
+feedback. It was written by the founder in May as part of the fabricated
+Facebook post described above, and it then sat in this file for months being
+read as evidence. Nothing here is based on a real customer reaction, because
+there has not been one yet.
+
+Treat the rest of this list as hypothesis, not finding. The only measured
+conversion data in the whole project is in the funnel numbers in section 23,
+and they come from 45 visitors.
 
 ### Messages Written (ready to use)
 
