@@ -1559,6 +1559,84 @@ variable moves.
 
 ---
 
+## 19d. Sprint 10 — PLANNED, NOT STARTED (drafted 26 September 2026)
+
+Goal: personalised colouring pages, and the first email list this business has
+ever had. Two deliverables sharing one core.
+
+Validated before planning: gpt-image-1 produces clean colouring-book line art
+from an existing dalle_prompt with the style anchor swapped. Tested by hand,
+output judged good. Still to check: how it looks printed on a home printer,
+where line weight and faint grey actually show up.
+
+### Track A — shared core (build first, both tracks depend on it)
+  to_colouring_prompt(): strip the watercolour style anchor from an existing
+    dalle_prompt, append the colouring anchor. No change to story_generator.py
+    at all — the scene and full character description are already in there,
+    which is what makes the colouring book match the story the child knows.
+      "Black and white line art for a children's colouring book. Clean bold
+       outlines, no shading, no greyscale, no colour, large simple shapes to
+       colour in, plain white background."
+  generate_colouring_images() in image_generator.py, reusing the existing
+    semaphore and MinuteRateLimiter. Stores to {job_id}/colour_{n}.png.
+  Letter-size page painter in pdf_builder.py. NOT the 206mm square used for
+    print: no bleed, 12mm safe margin, square art centred, name beneath.
+    Home printers cannot print edge to edge.
+
+### Track B — free personalised colouring page (the lead magnet)
+  POST /colouring-page: name, hair, eyes, email -> one image -> URL
+  New "leads" table in Supabase + a migration file
+  /free-colouring-page route: form -> ~25s generating screen -> shows the
+    image with a download button, and emails a copy
+  Per-IP rate limiting on the /generate pattern. A free image endpoint is an
+    invitation to burn credit.
+  Why this exists: 45 visitors a month, no email list, no social proof, and a
+  $39.99 ask from a brand nobody has heard of. 31 of last month's 45 visitors
+  left with no way to ever contact them again. Cost per lead ~4 cents.
+
+### Track C — paid colouring book
+  PRICES["colouring"] = 699, added to the CheckoutRequest tier Literal
+  fulfillment.py branch: generate 12 -> build -> email -> delivered
+  Generated AFTER payment, never before — same principle as the PDF today
+  Third button on /preview
+
+### Decisions already made (do not re-litigate)
+  $6.99. US Letter portrait. Four fields on the free form (name, hair, eyes,
+  email) — deliberately not the nine-field wall that loses two thirds of
+  people on /create today. Image shown on screen AND emailed, so the reward is
+  immediate and the address is still captured.
+
+### THE DEPENDENCY THAT BITES
+  Image throughput. The organisation is capped at 5 images/minute and it is
+  shared: a burst of free colouring-page requests competes directly with a
+  paying customer's book, and a colouring book doubles the images per order.
+  The OpenAI tier raise — overdue since 1 September, and dismissed until now
+  as "not binding at current volume" — becomes a PREREQUISITE for this sprint,
+  not a nice-to-have. Raise it first, then set IMAGES_PER_MINUTE on Railway.
+
+### Human steps this sprint cannot do for itself
+  Run the leads table migration in the Supabase SQL editor
+  Approve consent wording — marketing email needs consent at capture and an
+    unsubscribe link, which is different from today's transactional email
+  Print a test colouring page at home and look at it
+
+### Dated items that must not slip while this is being built
+  3 Oct   — outreach follow-up, once, in thread, then stop
+  23 Oct  — Supabase pauses again unless on Pro ($25/mo)
+  15 Nov  — Emily Reviews gift guide deadline
+  ASAP    — order the physical proof. It gates outreach converting, it is the
+            last major unknown, and a reply could arrive before 3 October
+
+### Explicitly NOT in this sprint
+  Printed colouring books. Wrong paper (coated silk with matt lamination is a
+  poor colouring surface) and line art at ~130 DPI is far less forgiving than
+  watercolour. Revisit only after the physical proof answers the resolution
+  question.
+  Bundling the colouring book as a checkout add-on. Better commercially, but
+  needs multi-line-item checkout. v2.
+
+---
+
 ## 20. Roadmap (post-launch)
 
 ### Month 1 (after first 10 orders)
