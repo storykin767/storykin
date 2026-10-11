@@ -3,6 +3,84 @@
 
 ---
 
+## 0. START HERE — state of play, 11 October 2026
+
+This file is long because it is the project's memory across sessions. Read this
+section first; it tells you where things actually stand and what is urgent.
+Everything below it is reference.
+
+The founder is **Fahad**. Do not infer his name from the git config
+(storykin767) or the Google account on the machine — both say otherwise.
+
+### Where the business actually is
+The product works. The business has no customers.
+
+- **Orders from real customers: ZERO.** One live $9.99 digital order exists,
+  placed by Fahad himself on 26 September to prove the payment chain. Real
+  money, not demand. Do not count it as traction.
+- **Traffic: 33 visitors in the 30 days to 11 October**, down 50% on the
+  previous 30 days. 95 page views, 67% bounce. 55% US, 55% mobile.
+- **Two books were generated on 5 and 6 October**, both completed
+  successfully, by people who are not Fahad. Neither bought.
+  That is the cleanest signal the project has ever had: strangers now reach a
+  finished, working book and still do not pay. Before October, every quiet
+  period could be blamed on something being broken. This one cannot.
+- The funnel over 30 days: 25 landed on `/`, 10 opened `/create`, 3 submitted
+  it, 2 finished a book, 0 bought.
+
+### What is urgent, by date
+- **23 OCTOBER — Supabase pauses again** unless the project is moved to Pro
+  ($25/mo). This already happened once (11-23 September) and took production
+  down silently: the site stayed up, /health kept returning 200, and every
+  visitor who tried to make a book got an error page with no trace in the
+  database. See section 18. **This is 12 days away and it is the single most
+  important thing on the list.**
+- **3 OCTOBER — outreach follow-up was due and has passed.** Six blogger and
+  gift-guide emails went out 26 September (see marketing/outreach.md). One
+  follow-up was planned, in-thread, then stop. Check whether it happened.
+- **15 NOVEMBER — Emily Reviews gift-guide deadline** (EmilyReviewsCom@gmail.com).
+  They explicitly want personalised items and accept small businesses. They
+  want a physical sample shipped, which is blocked — see below.
+
+### The one thing blocking almost everything else
+**No Storykin book has ever been physically printed.** The Gelato format is
+validated against a real draft order, but no proof copy has been ordered. This
+blocks: gift-guide submissions (they want samples), promoting the physical
+tier honestly, and the open print-resolution question in section 19c. It costs
+about $18 net and takes days to arrive. It has been the top open item since
+September and has not moved.
+
+### Known mess that needs a human
+- A **fabricated Facebook post** is still pending in the Grandma's Love group
+  (876K members), written as though a grandmother customer wrote it, inventing
+  a granddaughter and a crying scene. Two delete attempts failed. It must be
+  deleted by hand before an admin approves it. Section 23 has the detail.
+- **Two live Facebook posts are missing their link comment**, so they end with
+  "link in the comments" and there is no link. Dead ends. Section 23.
+- `hello@storykinbooks.com` **has no inbox** — the domain has no MX records.
+  Resend sends from it, nothing receives. The site promises that address in
+  eight places including the return address on printed parcels.
+
+### Verify any of this yourself rather than trusting it
+    # is Supabase alive?
+    nslookup <project-ref>.supabase.co 8.8.8.8     # NXDOMAIN = paused/deleted
+    # real orders (anything not "test" is a real customer)
+    curl "$SUPABASE_URL/rest/v1/orders?status=neq.test&select=*" \
+      -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY"
+    # books generated
+    curl "$SUPABASE_URL/rest/v1/jobs?select=created_at,status&order=created_at.desc"
+
+Traffic lives in Vercel Analytics and needs the dashboard. The jobs table is
+NOT traffic — it only counts people who got past a working form. Check both or
+you will mistake a broken site for a quiet one, which has already happened.
+
+### How Fahad works
+On multi-step checks that span dashboards or services, go ONE STEP AT A TIME
+and wait for the result before giving the next step. This is in section 22 and
+it has repeatedly caught things a batched checklist would have skimmed past.
+
+---
+
 ## 1. What is Storykin?
 
 A web platform that generates fully personalised, AI-illustrated children's storybooks
@@ -1476,7 +1554,29 @@ Sprint 9 (23 August - 10 September 2026) -- Selling it
 
 ---
 
-## 19c. Current State (as of 24 September 2026)
+## 19c. Current State (as of 11 October 2026)
+
+### October update — strangers now finish books and still do not buy
+Two books were generated on 5 and 6 October 2026, both status "complete",
+neither by Fahad. No order followed either one.
+
+This matters more than it looks. Every previous quiet stretch had an
+explanation that was not the product: dall-e-3 retired and every book failed
+May to August; Supabase paused and every visitor hit an error page 11-23
+September. Those excuses are now used up. In October the pipeline worked, the
+books finished, and the people who made them did not pay.
+
+So the open question has moved. It is no longer "does the thing work" — it
+does. It is "why does someone who has read a finished personalised book of
+their own child decline to spend $9.99 on it". That is a pricing, trust or
+presentation question, and nobody has data on it yet. Two data points is not
+an answer, but it is the first time the question has been askable.
+
+Traffic for the 30 days to 11 October: 33 visitors, 95 page views, 67% bounce,
+down 50% on the previous period. Funnel: 25 -> /create 10 -> /loading 3 ->
+2 completed books -> 0 orders.
+
+### Everything below was written 24 September and remains accurate
 
 Written down because it is easy to mistake a deliberate decision for an
 oversight when picking this up later.
