@@ -1078,12 +1078,20 @@ package.json pins no engines constraint, so Node 24 LTS suits Next 16 / React 19
                          from prebuilt wheels, nothing built from source
 - frontend\node_modules  npm install, 521 packages, package-lock.json unchanged
 
-### Still missing -- the app will not run until these exist
-- backend\.env, frontend\.env.local
-                         gitignored, so they are not in the clone. The backend
-                         refuses to start without them and names the missing
-                         variable (section 15). Copy them from the Mac, or
-                         re-read each value from its own dashboard.
+### Env files -- present since 23 September 2026
+backend\.env and frontend\.env.local exist on this machine (gitignored).
+Local Stripe is sk_test_ and the frontend points at localhost:8000, but
+backend\.env still points at the PRODUCTION Supabase project. Two guards keep
+that safe when ENVIRONMENT is anything but "production":
+  - main.py skips startup recovery, so a local start never fails live jobs
+    or re-fulfils real paid orders
+  - gelato.py downgrades every order to a draft, so nothing is ever printed
+DECIDED 25 October 2026: no separate dev Supabase project. Local development
+uses the production project on purpose. Do not propose a dev project again.
+The cost of that choice: anything a local run creates (jobs, story_pages,
+images, test orders) lands in the live tables, so mark or clean up test rows.
+
+### Still missing
 - Stripe CLI (optional)  winget install Stripe.StripeCli
 - Docker (optional)      only to verify Dockerfile/port changes -- see
                          "Never change the port the Dockerfile binds"
