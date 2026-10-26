@@ -27,6 +27,11 @@ The product works. The business has no customers.
   period could be blamed on something being broken. This one cannot.
 - The funnel over 30 days: 25 landed on `/`, 10 opened `/create`, 3 submitted
   it, 2 finished a book, 0 bought.
+- **25 OCTOBER UPDATE — production could not make books from at least 23 to
+  25 October.** OpenAI retired gpt-image-1. Fixed the same day by moving to
+  gpt-image-1.5 (section 11). On 25 October Railway was also moved from
+  Southeast Asia (Singapore) to US East (Virginia) while chasing the wrong
+  theory; it works there, and whether to move back is undecided.
 
 ### What is urgent, by date
 - **23 OCTOBER — Supabase pauses again** unless the project is moved to Pro
@@ -415,7 +420,7 @@ storykin/
 │   ├── pipeline.py                 -- Full generation orchestration (story+images+DB)
 │   ├── fulfillment.py              -- Post-payment: build PDF -> Gelato print / email PDF
 │   ├── story_generator.py          -- GPT-4o story generation, Pydantic models
-│   ├── image_generator.py          -- gpt-image-1 async loop, rate limiter, upload
+│   ├── image_generator.py          -- gpt-image-1.5 async loop, rate limiter, upload
 │   ├── pdf_builder.py              -- ReportLab cover/interior/digital PDFs, upload
 │   ├── checkout.py                 -- Stripe session creation, Resend emails
 │   ├── gelato.py                   -- Gelato print order submission
@@ -616,11 +621,29 @@ DALL-E style anchor (appended to every image prompt):
 tenacity retry: 3 attempts, exponential backoff 2-10 seconds
 Cost: ~$0.15 per book
 
-### Step 2: Illustration generation (gpt-image-1)
+### Step 2: Illustration generation (gpt-image-1.5)
 
-Model: gpt-image-1 (override with IMAGE_MODEL)
+Model: gpt-image-1.5 (override with IMAGE_MODEL; Railway also sets it)
 Size: 1024x1024
 Quality: medium (override with IMAGE_QUALITY)
+
+gpt-image-1 WAS RETIRED by OpenAI, by 23 October 2026. Production made no
+books from at least 23 to 25 October: the story was written, then the first
+illustration failed with "The model 'gpt-image-1' does not exist". A visitor
+tried seven times on 23 October. Switched to gpt-image-1.5 on 25 October,
+verified with a full 12-page book in 2m27s through the live site.
+
+THE TRAP THAT COST AN HOUR: a retired model can still pass OpenAI's request
+validation. A probe with a deliberately invalid size returned "Invalid size"
+for gpt-image-1 — which looked like proof the model worked — while every
+real generation failed. Only a real generation (quality=low, ~$0.01) proves
+a model is alive. Do not diagnose this as a key or region problem again.
+
+Candidates tested 25 October, real generations at medium:
+  gpt-image-1.5     ~13s  rich watercolour, eye colour honoured  <- chosen
+  gpt-image-1-mini  ~10s  works, flatter art, eyes drift toward teal
+Price of gpt-image-1.5 per image NOT yet checked against OpenAI pricing —
+the cost figures in section 2 still assume gpt-image-1.
 
 dall-e-3 WAS RETIRED by OpenAI. Every image call returned
 "The model 'dall-e-3' does not exist" and every book silently failed —
@@ -948,7 +971,7 @@ RATE_LIMIT_ENABLED=true         (set false only for local load testing)
 FROM_EMAIL=Storykin <hello@storykinbooks.com>
 SUPPORT_EMAIL=hello@storykinbooks.com
 STORY_MODEL=gpt-4o
-IMAGE_MODEL=gpt-image-1          (do NOT set this to dall-e-3 — it was retired)
+IMAGE_MODEL=gpt-image-1.5        (NOT dall-e-3 or gpt-image-1 — both retired)
 IMAGE_QUALITY=medium             (low renders the wrong eye colour too often)
 IMAGE_SIZE=1024x1024
 MAX_CONCURRENT_IMAGES=3
