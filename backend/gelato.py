@@ -29,6 +29,11 @@ PAGE_COUNT = int(os.getenv("GELATO_PAGE_COUNT", str(INTERIOR_PAGES)))
 
 RETURN_EMAIL = os.getenv("SUPPORT_EMAIL", "hello@storykinbooks.com")
 
+# Outside production every order goes in as a draft: Gelato validates and
+# prices it but never prints it. A local run with the live key set must not
+# be able to print and ship a real book.
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
+
 # Gelato accepts either a specific carrier uid or a type. "normal" picks the
 # cheapest option, which in the US is USPS Ground Advantage: $6.99 but 10-14
 # business days, so an order placed in December misses Christmas entirely.
@@ -130,6 +135,10 @@ def submit_gelato_order(
     """
     if not GELATO_API_KEY:
         raise RuntimeError("GELATO_API_KEY is not set — cannot submit print order")
+
+    if order_type != "draft" and not IS_PRODUCTION:
+        log.warning("Not in production — submitting %s as a Gelato draft", order_id)
+        order_type = "draft"
 
     payload = build_order_payload(
         order_id=order_id,

@@ -85,6 +85,13 @@ async def fulfil_order_row(order: dict) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Local runs can point at the production database. Sweeping from a laptop
+    # would fail live jobs mid-generation and re-fulfil real paid orders, so
+    # only the production service is allowed to recover anything.
+    if not IS_PRODUCTION:
+        log.info("Startup recovery skipped (ENVIRONMENT=%s)", ENVIRONMENT)
+        yield
+        return
     try:
         stale = await asyncio.to_thread(fail_interrupted_jobs)
         if stale:
