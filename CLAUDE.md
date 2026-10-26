@@ -31,7 +31,8 @@ The product works. The business has no customers.
   25 October.** OpenAI retired gpt-image-1. Fixed the same day by moving to
   gpt-image-1.5 (section 11). On 25 October Railway was also moved from
   Southeast Asia (Singapore) to US East (Virginia) while chasing the wrong
-  theory; it works there, and whether to move back is undecided.
+  theory. DECIDED: it stays in US East, closer to the US buyers and to
+  OpenAI, Stripe and Gelato.
 
 ### What is urgent, by date
 - **23 OCTOBER — Supabase pauses again** unless the project is moved to Pro
@@ -60,8 +61,9 @@ September and has not moved.
   (876K members), written as though a grandmother customer wrote it, inventing
   a granddaughter and a crying scene. Two delete attempts failed. It must be
   deleted by hand before an admin approves it. Section 23 has the detail.
-- **Two live Facebook posts are missing their link comment**, so they end with
-  "link in the comments" and there is no link. Dead ends. Section 23.
+- FIXED 25 October: the two published Facebook posts that had no link now
+  have a link comment (Grandparents Raising Grandchildren -> /gifts/grandparent,
+  Gifts Ideas for Newborns -> /gifts/birthday). Section 23.
 - `hello@storykinbooks.com` **has no inbox** — the domain has no MX records.
   Resend sends from it, nothing receives. The site promises that address in
   eight places including the return address on printed parcels.
@@ -642,8 +644,9 @@ a model is alive. Do not diagnose this as a key or region problem again.
 Candidates tested 25 October, real generations at medium:
   gpt-image-1.5     ~13s  rich watercolour, eye colour honoured  <- chosen
   gpt-image-1-mini  ~10s  works, flatter art, eyes drift toward teal
-Price of gpt-image-1.5 per image NOT yet checked against OpenAI pricing —
-the cost figures in section 2 still assume gpt-image-1.
+Price of gpt-image-1.5 checked by Fahad on 25 October and judged fine. The
+per-book figures in section 2 still use the old ~$0.042 an image; update them
+when the exact per-image price is written down.
 
 dall-e-3 WAS RETIRED by OpenAI. Every image call returned
 "The model 'dall-e-3' does not exist" and every book silently failed —
@@ -2000,9 +2003,9 @@ State as of 30 September 2026:
 | Grandma's Love | 876.2K | nothing ever published; 1 pending since May |
 | Grandparents Love Their Grandchildren | 67.9K | PUBLISHED 27 Sep, admin-approved in a minute, link comment added |
 | MOMS OF TODDLERS | 26.5K | posted 29 Sep, pending approval |
-| Gifts Ideas for Newborns Baby & Kids | 1.9K | PUBLISHED 29 Sep, link comment still missing |
+| Gifts Ideas for Newborns Baby & Kids | 1.9K | PUBLISHED 29 Sep, link comment added 25 Oct (/gifts/birthday) |
 | Baby Shower Gift Ideas!! | 692 | posted 29 Sep, pending; participant review outstanding |
-| Grandparents Raising Grandchildren | 528 | PUBLISHED 29 Sep, link comment still missing |
+| Grandparents Raising Grandchildren | 528 | PUBLISHED 29 Sep, link comment added 25 Oct (/gifts/grandparent) |
 
 Grandma's Love is the best target on the list — 876K, US, high engagement,
 exactly the primary persona — and it is unreachable until an admin approves
