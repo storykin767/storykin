@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Logo from '../../components/Logo';
+import SamplePages from '../../components/SamplePages';
 import { notFound } from 'next/navigation';
 import { OCCASION_PAGES, occasionBySlug } from '../../content/occasions';
 import { THEME_PAGES } from '../../content/themes';
@@ -57,6 +58,8 @@ export default async function OccasionPage({ params }: { params: Promise<{ occas
           <p className="text-lg text-gray-700 leading-relaxed">{o.intro[0]}</p>
         </div>
       </section>
+
+      <SamplePages slug={o.slug} />
 
       <section className="px-6 py-14">
         <div className="max-w-2xl mx-auto">
