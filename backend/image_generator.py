@@ -24,11 +24,14 @@ supabase: Client = create_client(
 # Semaphore(3) keeps us inside the OpenAI image rate limit
 MAX_CONCURRENT_IMAGES = int(os.getenv("MAX_CONCURRENT_IMAGES", "3"))
 
-# dall-e-3 was retired by OpenAI; every illustration call started returning
-# "The model 'dall-e-3' does not exist" and silently failed every book.
-# gpt-image-1 at medium: ~16s an image, ~$0.042 each, and it honours the
-# eye and hair colour in the prompt (low quality does not, reliably).
-IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-1")
+# OpenAI has retired two image models under this code: dall-e-3 (May 2026)
+# and gpt-image-1 (by 23 October 2026). Both failed the same way — every
+# illustration call returned "The model '...' does not exist" and every book
+# failed after the story was written. Beware: a retired model can still pass
+# OpenAI's request validation, so only a real generation proves it works.
+# gpt-image-1.5 at medium: ~13s an image, and it honours the eye and hair
+# colour in the prompt (low quality does not, reliably).
+IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-1.5")
 IMAGE_QUALITY = os.getenv("IMAGE_QUALITY", "medium")
 IMAGE_SIZE = os.getenv("IMAGE_SIZE", "1024x1024")
 

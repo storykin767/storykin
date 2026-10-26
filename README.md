@@ -30,7 +30,7 @@ This README is the front door. `CLAUDE.md` is the actual documentation.
    skin tone, a theme, an optional sidekick and a moral
 2. GPT-4o writes a 12-page story, returning structured JSON validated by
    Pydantic. Each page carries its own image prompt
-3. `gpt-image-1` paints 12 illustrations, paced to stay inside the OpenAI
+3. `gpt-image-1.5` paints 12 illustrations, paced to stay inside the OpenAI
    rate limit, each uploaded to Supabase Storage as it finishes
 4. The buyer reads the **whole finished book** before paying anything
 5. Stripe Checkout takes the payment

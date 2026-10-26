@@ -11,7 +11,7 @@ breaks without it, and what it costs. Written 24 August 2026.
 2. The browser calls **Railway**, which runs the Python backend. It writes a
    job row to **Supabase** and starts work in the background.
 3. **OpenAI** writes the story (GPT-4o), then paints 12 illustrations
-   (gpt-image-1).
+   (gpt-image-1.5).
 4. Each illustration is uploaded to **Supabase Storage**; the page text goes
    into the **Supabase** database.
 5. The customer reads the preview — a Vercel page, pulling from Railway,
@@ -63,7 +63,7 @@ row was written. **Next pause: 23 October 2026.** $25/mo Pro is what prevents
 it. Full diagnosis steps are in CLAUDE.md section 18.
 
 ### OpenAI — the writing and the illustrations
-GPT-4o writes each story. gpt-image-1 paints the 12 illustrations at medium
+GPT-4o writes each story. gpt-image-1.5 paints the 12 illustrations at medium
 quality. Both are called from Railway.
 **Without it:** no new books can be created.
 **Note:** the organisation is capped at 5 images/minute, which caps throughput
