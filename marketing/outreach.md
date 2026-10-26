@@ -88,6 +88,77 @@ Subject: `Free personalised book for [child's name / your readers]?`
 
 ---
 
+## Email 3 — the digital-book offer (use this until a printed proof exists)
+
+Written 25 October 2026. Gift guides want to see the product, and no Storykin
+book has been printed yet. A digital book made for the blogger's own child
+costs ~$0.65 and can be in their inbox the same day, so it unblocks every
+pitch that was waiting on a physical sample. Offer the printed copy as a
+follow-on, never as a promise with a date.
+
+Subject: `A storybook made for your child, for your gift guide`
+
+> Hi [name],
+>
+> [One specific sentence about something they actually wrote.]
+>
+> I build Storykin. Each book is written and illustrated from scratch for one
+> child: their name, hair and eyes, a companion they choose, and a gentle
+> lesson if you want one. Not a fixed story with a name dropped in.
+>
+> Rather than describe it, I would like to make one for a child in your life.
+> Send me their first name, age, hair and eye colour and a theme (dinosaurs,
+> space, mermaids, a forest, superheroes or a kingdom), and I will send you the
+> finished 12-page book as a PDF the same day. Free, no obligation to write
+> about it.
+>
+> If it earns a place in a guide, everything a reader needs is at
+> storykinbooks.com/gifts/christmas, including the order-by dates.
+>
+> [your name]
+> Storykin
+
+### Emily Reviews (EmilyReviewsCom@gmail.com) — deadline 15 November
+
+Their submission calls ask for four things: brand or product name, a short
+description, a link, and a contact for samples. Readers are mostly US women
+25-44 with children, who do the household shopping. Send in their format:
+
+Subject: `Gift guide submission: Storykin personalised storybooks`
+
+> Hi Emily Reviews team,
+>
+> Submitting for your holiday gift guide.
+>
+> Brand: Storykin
+>
+> Product: a personalised children's storybook, written and illustrated from
+> scratch for one child. Their name, appearance, a companion they choose and
+> the lesson in the story are all theirs, so no two books are the same. The
+> buyer reads the whole finished book on screen before paying. $39.99 printed
+> (8x8" softcover, shipped), or $9.99 as a PDF.
+>
+> Link: https://storykinbooks.com/gifts/christmas
+>
+> Sample: I can make a book for a child of your choosing today and send the
+> PDF straight away. Just reply with their first name, age, hair and eye
+> colour and a theme.
+>
+> [your name]
+> Storykin
+
+### Before sending ANY of these: replies must reach a real inbox
+
+hello@storykinbooks.com has no MX records, so mail sent TO it disappears. If
+the 26 September emails went out from that address, any reply was lost.
+Either send from a Gmail you actually read, or set up forwarding first
+(Namecheap: Domain List -> storykinbooks.com -> Manage -> Mail Settings ->
+Email Forwarding, then forward hello -> your Gmail). Resend's own DNS
+records sit on the send. subdomain and are not affected by adding MX
+for the root domain.
+
+---
+
 ## Follow-up (once, after 7 days, then stop)
 
 Subject: reply to the original thread, do not start a new one
