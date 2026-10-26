@@ -10,7 +10,7 @@ const STEPS = [
   {
     emoji: '✨',
     title: 'We write and illustrate it',
-    desc: 'Our AI writes a unique 10-page story and paints every illustration just for them.'
+    desc: 'We write a unique 12-page story and paint every illustration just for them.'
   },
   {
     emoji: '📖',
@@ -40,7 +40,7 @@ const FAQS = [
   },
   {
     q: 'Can I see the book before I pay?',
-    a: 'Yes — always. We generate the complete 10-page book and let you read every page before you decide to purchase. You only pay if you love it.'
+    a: 'Yes — always. We generate the complete 12-page book and let you read every page before you decide to purchase. You only pay if you love it.'
   },
   {
     q: 'How long does delivery take?',
@@ -70,7 +70,7 @@ export default function HomePage() {
               "@context": "https://schema.org",
               "@type": "Product",
               "name": "Storykin Personalised Children's Storybook",
-              "description": "A completely unique personalised children's storybook where your child is the hero. Written by AI, illustrated, printed and delivered.",
+              "description": "A completely unique personalised children's storybook where your child is the hero. Written and illustrated just for them, printed and delivered to your door.",
               "url": "https://storykinbooks.com",
               "brand": {
                 "@type": "Brand",
@@ -82,12 +82,9 @@ export default function HomePage() {
                 "priceCurrency": "USD",
                 "availability": "https://schema.org/InStock",
                 "url": "https://storykinbooks.com/create"
-              },
-              "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "5",
-                "reviewCount": "1"
               }
+              // No aggregateRating until real customer reviews exist: Google
+              // treats a rating with nothing behind it as spam markup
             })
           }}
         />
@@ -111,7 +108,7 @@ export default function HomePage() {
                   "name": "Can I see the book before I pay?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes — always. We generate the complete 10-page book and let you read every page before you decide to purchase."
+                    "text": "Yes — always. We generate the complete 12-page book and let you read every page before you decide to purchase."
                   }
                 },
                 {

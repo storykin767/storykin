@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Logo from '../../components/Logo';
+import SamplePages from '../../components/SamplePages';
 import { notFound } from 'next/navigation';
 import { THEME_PAGES, themeBySlug } from '../../content/themes';
 
@@ -56,6 +57,8 @@ export default async function ThemePage({ params }: { params: Promise<{ theme: s
           <p className="text-lg text-gray-700 leading-relaxed">{t.intro[0]}</p>
         </div>
       </section>
+
+      <SamplePages slug={t.slug} />
 
       <section className="px-6 py-14">
         <div className="max-w-2xl mx-auto">
