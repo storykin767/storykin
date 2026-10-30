@@ -18,7 +18,9 @@ from pydantic import BaseModel, Field, field_validator
 from supabase import Client, create_client
 
 from config import ENVIRONMENT, IS_PRODUCTION
-from checkout import JobNotReady, create_checkout_session, send_confirmation_email
+from checkout import (
+    JobNotFound, JobNotReady, create_checkout_session, send_confirmation_email,
+)
 from fulfillment import fulfill_order
 from pipeline import run_pipeline
 
@@ -303,6 +305,8 @@ def get_book(job_id: str):
 def create_checkout(request: CheckoutRequest):
     try:
         url = create_checkout_session(request.job_id, request.tier)
+    except JobNotFound:
+        raise HTTPException(status_code=404, detail="Book not found")
     except JobNotReady as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
