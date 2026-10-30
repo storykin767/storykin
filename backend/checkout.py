@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 
 import resend
 import stripe
@@ -37,18 +38,34 @@ class JobNotReady(Exception):
     """The book is not finished generating, so it cannot be sold yet."""
 
 
+class JobNotFound(Exception):
+    """There is no book with this id, so there is nothing to sell."""
+
+
 def create_checkout_session(job_id: str, tier: str = "physical") -> str:
     """Create a Stripe checkout session. Returns the checkout URL."""
 
     if tier not in PRICES:
         raise ValueError(f"Unknown tier: {tier}")
 
-    job = supabase.table("jobs").select("*").eq("id", job_id).single().execute()
-    if job.data["status"] != "complete" or not job.data.get("story_data"):
-        raise JobNotReady(f"Job {job_id} is not finished (status: {job.data['status']})")
+    # Postgres rejects a malformed uuid with an error rather than no rows,
+    # and .single() raises on zero rows. Either way it surfaced as a 500 and
+    # a Sentry alert for what is just a bad link.
+    try:
+        uuid.UUID(job_id)
+    except ValueError:
+        raise JobNotFound(f"No book with id {job_id}")
 
-    child_name = job.data["child_data"]["child_name"]
-    story_title = job.data["story_data"]["title"]
+    rows = supabase.table("jobs").select("*").eq("id", job_id).limit(1).execute()
+    if not rows.data:
+        raise JobNotFound(f"No book with id {job_id}")
+    job = rows.data[0]
+
+    if job["status"] != "complete" or not job.get("story_data"):
+        raise JobNotReady(f"Job {job_id} is not finished (status: {job['status']})")
+
+    child_name = job["child_data"]["child_name"]
+    story_title = job["story_data"]["title"]
 
     if tier == "digital":
         product_name = f"{child_name}'s Personalised Storybook — Digital PDF"
