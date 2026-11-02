@@ -29,17 +29,8 @@ function LoadingContent() {
   const jobId = searchParams.get('jobId');
 
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState("Opening the storybook...");
-  const [dots, setDots] = useState('');
+  const [message, setMessage] = useState("Opening the storybook");
   const [slow, setSlow] = useState(false);
-
-  // Animate dots
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots(d => d.length >= 3 ? '' : d + '.');
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
 
   // Poll backend for real progress
   useEffect(() => {
@@ -71,10 +62,10 @@ function LoadingContent() {
 
         // Update message based on real status
         if (data.status === 'generating_story') {
-          setMessage("Writing the story...");
+          setMessage("Writing the story");
         } else if (data.status === 'generating_images') {
           const page = data.current_page || 1;
-          setMessage(`Painting illustration ${page} of 12...`);
+          setMessage(`Painting illustration ${page} of 12`);
         } else if (data.status === 'complete') {
           setMessage("Your book is ready!");
           setProgress(100);
@@ -111,9 +102,16 @@ function LoadingContent() {
         </div>
         <div className="text-8xl mb-8 animate-bounce">📖</div>
 
-        {/* Dynamic message */}
+        {/* Dynamic message. The message is one text node and the dots are pure
+            CSS. It used to be {message}{dots} with the dots in React state:
+            when a browser translated the page, React later removed a text
+            node the translator had already replaced, and the whole screen
+            crashed before the visitor reached their book (31 October 2026). */}
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {message}{dots}
+          {/* key: swap the whole element on each change, so a translated
+              page gets the new message too instead of keeping the old one */}
+          <span key={message}>{message}</span>
+          {!message.endsWith('!') && <span className="loading-dots" aria-hidden="true" />}
         </h2>
         <p className="text-gray-500 mb-10">
           {slow

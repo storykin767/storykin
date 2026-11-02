@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animated "..." after the loading message. Pure CSS on purpose: changing
+   dots in React state crashed the loading screen on translated pages. */
+.loading-dots::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: loading-dots 2s steps(4, end) infinite;
+}
+@keyframes loading-dots {
+  0%   { content: ""; }
+  25%  { content: "."; }
+  50%  { content: ".."; }
+  75%  { content: "..."; }
+}
