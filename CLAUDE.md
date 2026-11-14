@@ -967,6 +967,7 @@ SENTRY_DSN=...                  (backend error monitoring; logs only if unset)
 SENTRY_TRACES_SAMPLE_RATE=0.1   (backend trace sampling)
 STALE_AFTER_MINUTES=15          (age at which in-flight work counts as orphaned)
 RECOVER_WINDOW_HOURS=24         (how far back startup recovery will look)
+KEEPALIVE_HOURS=6               (Supabase keep-alive read interval, production only)
 ALLOWED_ORIGINS=...             (comma separated; defaults to the known frontends)
 RATE_LIMIT_PER_HOUR=5           (books per IP per hour on /generate)
 RATE_LIMIT_PER_DAY=20           (books per IP per day)
@@ -1244,7 +1245,18 @@ Order statuses: paid -> printing / delivered, or fulfillment_failed.
 ## 18. Known Issues & Technical Debt
 
 ### Supabase free tier pauses the project, and that takes production down
-NEXT PAUSE: 23 OCTOBER 2026. Paying $25/mo for Pro is what stops it.
+Paying $25/mo for Pro is what stops it.
+
+It paused AGAIN between 7 and 14 November 2026: still on the free plan, and
+Supabase pauses after about a week of low database activity. Site visits do
+not count — only making, viewing or buying a book touches the database, which
+at current traffic is roughly once a fortnight. Restored by Fahad on 14
+November.
+
+Stopgap since then: main.py runs keep_database_awake(), a one-row read every
+KEEPALIVE_HOURS (default 6), production only. Search Railway logs for
+"Supabase keep-alive". Supabase says a few requests a day is "usually" enough,
+not guaranteed — this reduces the risk, Pro removes it.
 
 This already happened. The project was paused around 11 September 2026 and was
 still down on 23 September. What it looks like from outside is the dangerous

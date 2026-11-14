@@ -85,6 +85,29 @@ async def fulfil_order_row(order: dict) -> None:
     )
 
 
+# ── Keep the free Supabase project awake ──────────────────────
+# Supabase pauses a free project after about a week of low database activity,
+# and site visits do not count: only making, viewing or buying a book touches
+# the database. It paused on 11 September and again by 14 November 2026, and
+# both times every visitor got the error page while /health stayed green.
+# A small read every few hours is the stopgap until the project is on Pro,
+# where projects are never paused.
+KEEPALIVE_HOURS = float(os.getenv("KEEPALIVE_HOURS", "6"))
+
+
+async def keep_database_awake() -> None:
+    while True:
+        try:
+            await asyncio.to_thread(
+                lambda: supabase.table("jobs").select("id").limit(1).execute()
+            )
+            log.info("Supabase keep-alive: ok")
+        except Exception as e:
+            # Keep going: a missed check-in is harmless, a dead loop is not
+            log.warning("Supabase keep-alive failed: %s", e)
+        await asyncio.sleep(KEEPALIVE_HOURS * 3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Local runs can point at the production database. Sweeping from a laptop
@@ -105,6 +128,7 @@ async def lifespan(app: FastAPI):
             log.info("Startup recovery: nothing to recover")
     except Exception as e:
         log.exception("Startup recovery failed (continuing anyway): %s", e)
+    spawn(keep_database_awake())
     yield
 
 
