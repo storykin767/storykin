@@ -72,6 +72,9 @@ export default function HomePage() {
               "name": "Storykin Personalised Children's Storybook",
               "description": "A completely unique personalised children's storybook where your child is the hero. Written and illustrated just for them, printed and delivered to your door.",
               "url": "https://storykinbooks.com",
+              // Google Merchant Center checks the page against the product
+              // feed in app/products.xml — keep the price and image in step
+              "image": "https://storykinbooks.com/samples/cover-ava.jpg",
               "brand": {
                 "@type": "Brand",
                 "name": "Storykin"
@@ -81,7 +84,23 @@ export default function HomePage() {
                 "price": "39.99",
                 "priceCurrency": "USD",
                 "availability": "https://schema.org/InStock",
-                "url": "https://storykinbooks.com/create"
+                "itemCondition": "https://schema.org/NewCondition",
+                "url": "https://storykinbooks.com/create",
+                "shippingDetails": {
+                  "@type": "OfferShippingDetails",
+                  "shippingRate": { "@type": "MonetaryAmount", "value": "0", "currency": "USD" },
+                  "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "US" }
+                },
+                "hasMerchantReturnPolicy": {
+                  "@type": "MerchantReturnPolicy",
+                  "applicableCountry": "US",
+                  "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                  "merchantReturnDays": 14,
+                  // The buyer keeps the book: see /refund-policy
+                  "returnFees": "https://schema.org/FreeReturn",
+                  "refundType": "https://schema.org/FullRefund",
+                  "merchantReturnLink": "https://storykinbooks.com/refund-policy"
+                }
               }
               // No aggregateRating until real customer reviews exist: Google
               // treats a rating with nothing behind it as spam markup
